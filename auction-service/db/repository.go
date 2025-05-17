@@ -20,8 +20,9 @@ type AuctionDB struct {
 func toAuction(db AuctionDB) auction.Auction {
 
 	return auction.Auction{
-		ID:   db.ID,
-		Name: db.Name,
+		ID:       db.ID,
+		Name:     db.Name,
+		BidderId: db.BidderId,
 	}
 }
 

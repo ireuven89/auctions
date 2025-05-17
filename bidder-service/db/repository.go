@@ -98,7 +98,7 @@ func prepareUpdateQuery(bidder bidder.Bidder) (string, []interface{}, error) {
 }
 
 func (r *Repo) Delete(ctx context.Context, id string) error {
-	q := "delete from bidders-service where id = ?"
+	q := "delete from bidders where id = ?"
 
 	if _, err := r.db.ExecContext(ctx, q, id); err != nil {
 		r.logger.Error("failed deleting bidder ", zap.Error(err), zap.String("id", id))

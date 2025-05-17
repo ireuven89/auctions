@@ -1,8 +1,13 @@
 package db
 
 import (
+	"context"
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/ireuven89/auctions/auction-service/auction"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap/zaptest"
+	"regexp"
 	"testing"
 )
 
@@ -46,4 +51,36 @@ func TestUpdateQuery(t *testing.T) {
 		assert.Equal(t, q, test.ExpectedQuery, test.Name)
 		assert.Equal(t, args, test.ExpectedArgs, test.Name)
 	}
+}
+
+func TestRepo_FindAll(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	defer db.Close()
+
+	logger := zaptest.NewLogger(t)
+	r := &Repo{
+		db:     db,
+		logger: logger,
+	}
+
+	// Prepare fake request
+	req := auction.AuctionRequest{Name: "car"}
+
+	// The query should match the generated WHERE clause
+	expectedQuery := regexp.QuoteMeta("SELECT id, name, bidder_id from auctions where name LIKE '%car%'")
+
+	rows := sqlmock.NewRows([]string{"id", "name", "bidder_id"}).
+		AddRow("a1", "car auction", "b123").
+		AddRow("a2", "sports car auction", "b456")
+
+	mock.ExpectQuery(expectedQuery).WillReturnRows(rows)
+
+	auctions, err := r.FindAll(context.Background(), req)
+	require.NoError(t, err)
+	require.Len(t, auctions, 2)
+
+	require.Equal(t, "a1", auctions[0].ID)
+	require.Equal(t, "car auction", auctions[0].Name)
+	require.Equal(t, "b123", auctions[0].BidderId)
 }
