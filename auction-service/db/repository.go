@@ -27,6 +27,7 @@ func toAuction(db AuctionDB) auction.Auction {
 
 type Repository interface {
 	Find(ctx context.Context, id string) (auction.Auction, error)
+	FindAll(ctx context.Context, request auction.AuctionRequest) ([]auction.Auction, error)
 	Update(ctx context.Context, auction auction.AuctionRequest) error
 	Create(ctx context.Context, auction auction.AuctionRequest) error
 	Delete(ctx context.Context, id string) error
@@ -70,6 +71,40 @@ func (r *Repo) Find(ctx context.Context, id string) (auction.Auction, error) {
 	}
 
 	return toAuction(result), nil
+}
+
+func (r *Repo) FindAll(ctx context.Context, request auction.AuctionRequest) ([]auction.Auction, error) {
+	var result []auction.Auction
+	whereParams := prepareSearchQuery(request)
+	q := fmt.Sprintf("SELECT id, name, bidder_id from auctions where %s", whereParams)
+
+	rows, err := r.db.QueryContext(ctx, q)
+
+	if err != nil {
+		r.logger.Error("Repo.FindAll failed to query", zap.Error(err))
+		return nil, fmt.Errorf("Repo.FindAll failed to detch results %w", err)
+	}
+
+	for rows.Next() {
+		var auctionDB AuctionDB
+		if err = rows.Scan(&auctionDB.ID, &auctionDB.Name, &auctionDB.BidderId); err != nil {
+			r.logger.Error("FindAll failed to cast results", zap.Error(err))
+			return nil, fmt.Errorf("Repo.FindAll %w", err)
+		}
+		result = append(result, toAuction(auctionDB))
+	}
+
+	return result, nil
+}
+
+func prepareSearchQuery(request auction.AuctionRequest) string {
+	var where strings.Builder
+
+	if request.Name != "" {
+		where.WriteString(fmt.Sprintf("name LIKE '%%%s%%'", request.Name))
+	}
+
+	return where.String()
 }
 
 func (r *Repo) Update(ctx context.Context, auction auction.AuctionRequest) error {

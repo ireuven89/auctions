@@ -12,6 +12,7 @@ import (
 
 type Service interface {
 	Fetch(ctx context.Context, id string) (*auction.Auction, error)
+	Search(ctx context.Context, request auction.AuctionRequest) ([]auction.Auction, error)
 	Update(ctx context.Context, auction auction.AuctionRequest) error
 	Create(ctx context.Context, auction auction.AuctionRequest) (string, error)
 	Delete(ctx context.Context, id string) error
@@ -42,6 +43,18 @@ func (s *AuctionService) Fetch(ctx context.Context, id string) (*auction.Auction
 	}
 
 	return &res, nil
+}
+
+func (s *AuctionService) Search(ctx context.Context, request auction.AuctionRequest) ([]auction.Auction, error) {
+
+	res, err := s.repo.FindAll(ctx, request)
+
+	if err != nil {
+		s.logger.Error("AuctionService.Search failed to search", zap.Error(err))
+		return nil, fmt.Errorf("AuctionService.Search %w", err)
+	}
+
+	return res, nil
 }
 
 func (s *AuctionService) Update(ctx context.Context, auction auction.AuctionRequest) error {
