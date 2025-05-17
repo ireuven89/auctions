@@ -11,7 +11,8 @@ type Auction struct {
 type AuctionRequest struct {
 	ID   string `json:"-"`
 	Name string `json:"name"`
+	Item string `json:"item"`
 }
 
 var ErrNotFound = errors.New("resource not found")
-var DBErr = errors.New("db error")
+var DuplicateKey = errors.New("duplicate error key")

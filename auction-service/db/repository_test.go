@@ -30,6 +30,13 @@ func TestUpdateQuery(t *testing.T) {
 			ExpectedArgs:  nil,
 			ExpectedErr:   true,
 		},
+		{
+			Name:          "another query",
+			Request:       auction.AuctionRequest{ID: "test-id", Name: "name"},
+			ExpectedQuery: "UPDATE auctions SET name = ? WHERE id = ?",
+			ExpectedArgs:  []interface{}{"name", "test-id"},
+			ExpectedErr:   false,
+		},
 	}
 
 	for _, test := range tests {

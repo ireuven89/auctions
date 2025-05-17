@@ -7,5 +7,6 @@ func formatBidder(bidder bidder.Bidder) map[string]interface{} {
 	return map[string]interface{}{
 		"id":   bidder.ID,
 		"name": bidder.Name,
+		"item": bidder.Item,
 	}
 }

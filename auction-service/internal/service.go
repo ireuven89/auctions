@@ -3,6 +3,7 @@ package internal
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/ireuven89/auctions/auction-service/auction"
 	"github.com/ireuven89/auctions/auction-service/db"
@@ -33,11 +34,11 @@ func (s *AuctionService) Fetch(ctx context.Context, id string) (*auction.Auction
 	res, err := s.repo.Find(ctx, id)
 
 	if err != nil {
-		s.logger.Error("AuctionService failed to fetch auction")
+		s.logger.Error("AuctionService failed to fetch auction", zap.Error(err))
 		if err == sql.ErrNoRows {
 			return nil, auction.ErrNotFound
 		}
-		return nil, err
+		return nil, fmt.Errorf("AuctionService.Fetch failed fetching bidder %w", err)
 	}
 
 	return &res, nil
@@ -46,29 +47,34 @@ func (s *AuctionService) Fetch(ctx context.Context, id string) (*auction.Auction
 func (s *AuctionService) Update(ctx context.Context, auction auction.AuctionRequest) error {
 
 	if err := s.repo.Update(ctx, auction); err != nil {
-		s.logger.Error("AuctionService failed to update auction")
-		return err
+		s.logger.Error("AuctionService failed to update auction", zap.Error(err))
+		return fmt.Errorf("AuctionService.Update failed updating %w", err)
 	}
 
 	return nil
 }
 
 func (s *AuctionService) Create(ctx context.Context, auction auction.AuctionRequest) (string, error) {
-	id := uuid.New().String()
-	auction.ID = id
+	auction.ID = generateID()
 
 	if err := s.repo.Create(ctx, auction); err != nil {
 		s.logger.Error("failed to create auction ", zap.Error(err))
-		return "", err
+		return "", fmt.Errorf("AuctionService.Create failed creating %w", err)
 	}
 
-	return id, nil
+	return auction.ID, nil
+}
+
+func generateID() string {
+
+	return uuid.New().String()
 }
 
 func (s *AuctionService) Delete(ctx context.Context, id string) error {
 
 	if err := s.repo.Delete(ctx, id); err != nil {
-		return err
+		s.logger.Error("AuctionService.Delete failed deleting bidder", zap.Error(err))
+		return fmt.Errorf("AuctionService.Delete failed deleting %w", err)
 	}
 
 	return nil

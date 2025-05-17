@@ -32,7 +32,7 @@ func NewRepository(db *sql.DB, logger *zap.Logger) Repository {
 
 func (r *Repo) Find(ctx context.Context, id string) (bidder.Bidder, error) {
 	var result BidderDb
-	q := "select id, name from bidders where id = ?"
+	q := "select id, name, item from bidders where id = ?"
 
 	row := r.db.QueryRowContext(ctx, q, id)
 
@@ -40,7 +40,7 @@ func (r *Repo) Find(ctx context.Context, id string) (bidder.Bidder, error) {
 		return bidder.Bidder{}, row.Err()
 	}
 
-	if err := row.Scan(&result.ID, &result.Name); err != nil {
+	if err := row.Scan(&result.ID, &result.Name, &result.Item); err != nil {
 		return bidder.Bidder{}, err
 	}
 
@@ -48,9 +48,9 @@ func (r *Repo) Find(ctx context.Context, id string) (bidder.Bidder, error) {
 }
 
 func (r *Repo) Create(ctx context.Context, bidder bidder.Bidder) error {
-	q := "insert into bidders (id, name) values(?, ?)"
+	q := "insert into bidders (id, name, item) values(?, ?, ?)"
 
-	if _, err := r.db.ExecContext(ctx, q, bidder.ID, bidder.Name); err != nil {
+	if _, err := r.db.ExecContext(ctx, q, bidder.ID, bidder.Name, bidder.Item); err != nil {
 		r.logger.Error("Create failed inserting to ", zap.Error(err))
 		return err
 	}
@@ -58,14 +58,43 @@ func (r *Repo) Create(ctx context.Context, bidder bidder.Bidder) error {
 }
 
 func (r *Repo) Update(ctx context.Context, bidder bidder.Bidder) error {
-	q := "update bidders set name = ? where id = ?"
+	q, args, err := prepareUpdateQuery(bidder)
 
-	if _, err := r.db.ExecContext(ctx, q, bidder.Name, bidder.ID); err != nil {
-		r.logger.Error("Update ailed updating", zap.Error(err), zap.String("resource", bidder.ID))
+	if err != nil {
+		return fmt.Errorf("Repo.Update failed preparing query %w", err)
+	}
+
+	if _, err = r.db.ExecContext(ctx, q, args...); err != nil {
+		r.logger.Error("Update failed updating", zap.Error(err), zap.String("resource", bidder.ID))
 		return fmt.Errorf("Repository.Update %w", err)
 	}
 
 	return nil
+}
+
+func prepareUpdateQuery(bidder bidder.Bidder) (string, []interface{}, error) {
+	query := "UPDATE bidders SET "
+	var sets []string
+	var args []interface{}
+
+	if bidder.Name != "" {
+		sets = append(sets, "name = ?")
+		args = append(args, bidder.Name)
+	}
+
+	if bidder.Item != "" {
+		sets = append(sets, "item = ?")
+		args = append(args, bidder.Item)
+	}
+
+	if len(sets) == 0 {
+		return "", nil, fmt.Errorf("no fields to update")
+	}
+
+	query += strings.Join(sets, ", ") + " WHERE id = ?"
+	args = append(args, bidder.ID)
+
+	return query, args, nil
 }
 
 func (r *Repo) Delete(ctx context.Context, id string) error {
