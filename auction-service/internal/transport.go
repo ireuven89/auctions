@@ -101,7 +101,7 @@ func decodeCreateAuctionRequest(c context.Context, r *http.Request) (interface{}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		fmt.Printf("decodeCreateAuctionRequest failed decoding request %v", err)
-		return nil, err
+		return nil, fmt.Errorf("decodeCreateAuctionRequest failed casting request")
 	}
 
 	return req, nil
@@ -124,7 +124,7 @@ func decodeUpdateAuctionRequest(c context.Context, r *http.Request) (interface{}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		fmt.Printf("decodeCreateAuctionRequest failed decoding request %v", err)
-		return nil, err
+		return nil, fmt.Errorf("decodeUpdateAuctionRequest %w", err)
 	}
 
 	req.ID = httprouter.ParamsFromContext(c).ByName("id")
@@ -137,7 +137,7 @@ func decodeDeleteAuctionRequest(c context.Context, r *http.Request) (interface{}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		fmt.Printf("decodeDeleteAuctionRequest failed decoding request %v", err)
-		return nil, err
+		return nil, fmt.Errorf("decodeDeleteAuctionRequest %w", err)
 	}
 
 	return req, nil

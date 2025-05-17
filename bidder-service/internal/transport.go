@@ -91,7 +91,7 @@ func encodeGetBidderResponse(ctx context.Context, w http.ResponseWriter, respons
 	res, ok := response.(GetBidderResponseModel)
 
 	if !ok {
-		return fmt.Errorf("Transport.encodeGetBidderResponse failed parsing reponse")
+		return fmt.Errorf("encodeGetBidderResponse failed parsing reponse")
 	}
 
 	formmated := formatBidder(res.bidder)
@@ -117,10 +117,11 @@ func encodeGetBiddersResponse(ctx context.Context, w http.ResponseWriter, respon
 		return fmt.Errorf("Transport.encodeGetBidderResponse failed parsing reponse")
 	}
 
-	var formatted []bidder.Bidder
+	var formatted []map[string]interface{}
 
 	for _, bidder := range res.bidders {
-		formatted = append(formatted, bidder)
+		formattedBidder := formatBidder(bidder)
+		formatted = append(formatted, formattedBidder)
 	}
 
 	return json.NewEncoder(w).Encode(formatted)

@@ -26,7 +26,7 @@ func MakeEndpointGetAuction(s Service) endpoint.Endpoint {
 
 		if err != nil {
 
-			return nil, err
+			return nil, fmt.Errorf("MakeEndpointGetAuction %w", err)
 		}
 
 		return GetAuctionResponseModel{
