@@ -1,0 +1,67 @@
+services:
+  auctions:
+    build:
+      context: ./auction-service
+      dockerfile: Dockerfile
+    container_name: auction-service
+    depends_on:
+      auctions-db:
+        condition: service_healthy
+    environment:
+      - ENV=${APP_ENV}
+      - CONFIG_PATH=/config
+      - APP_ENV=local
+      - MIGRATIONS_DIR=${MIGRATIONS_DIR}
+  bidders:
+    build:
+      context: ./bidder-service
+      dockerfile: Dockerfile
+    container_name: bidders-service
+    environment:
+      - ENV=${APP_ENV}
+      - CONFIG=/config
+      - MIGRATIONS_DIR=${MIGRATIONS_DIR}
+    depends_on:
+      bidders-db:
+        condition: service_healthy
+    networks:
+      - app-net
+  auctions-db:
+    image: mysql:latest
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+    healthcheck:
+      start_period: 10s
+      timeout: 1m
+      interval: 10s
+      test: [ "CMD", "mysqladmin" ,"ping", "-h", "localhost" ]
+    ports:
+      - "3307:3306"
+  bidders-db:
+    image: mysql:latest
+    container_name: bidders-db
+    environment:
+      - MYSQL_ROOT_PASSWORD=admin
+    healthcheck:
+      start_period: 10s
+      timeout: 1m
+      interval: 10s
+      test: [ "CMD", "mysqladmin" ,"ping", "-h", "localhost" ]
+    ports:
+      - "3308:3306"
+    networks:
+      - app-net
+  redis:
+    image: redis:latest
+    container_name: redis-server
+    environment:
+      - REDIS_PASSWORD=admin
+    ports:
+      - "6379:6379"
+    networks:
+      - app-net
+
+networks:
+  app-net:
+    driver: bridge
+

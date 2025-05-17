@@ -1,0 +1,15 @@
+database:
+  host: "auctions-db"
+  port: 3306
+  user: "root"
+  password: "admin"
+
+server:
+  port: "8090"
+
+
+redis:
+  port: 6379
+  host: "redis"
+  user: "admin"
+  password: "${REDIS_PASSWORD}"

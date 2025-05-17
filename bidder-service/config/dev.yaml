@@ -1,0 +1,11 @@
+server:
+  port: "8090"
+
+database:
+  host: "bidders-db"
+  user: "root"
+  password: "admin"
+  port: 3306
+
+rabbit:
+  host: ""
