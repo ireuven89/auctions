@@ -4,9 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
+
 	"github.com/ireuven89/auctions/bidder-service/bidder"
 	"go.uber.org/zap"
-	"strings"
 )
 
 type Repository interface {
@@ -15,22 +16,23 @@ type Repository interface {
 	Create(ctx context.Context, bidder bidder.Bidder) error
 	Update(ctx context.Context, bidder bidder.Bidder) error
 	Delete(ctx context.Context, id string) error
+	DeleteMany(ctx context.Context, ids []interface{}) error
 }
 
-type Repo struct {
+type BidderRepository struct {
 	logger *zap.Logger
 	db     *sql.DB
 }
 
 func NewRepository(db *sql.DB, logger *zap.Logger) Repository {
 
-	return &Repo{
+	return &BidderRepository{
 		logger: logger,
 		db:     db,
 	}
 }
 
-func (r *Repo) Find(ctx context.Context, id string) (bidder.Bidder, error) {
+func (r *BidderRepository) Find(ctx context.Context, id string) (bidder.Bidder, error) {
 	var result BidderDb
 	q := "select id, name, item from bidders where id = ?"
 
@@ -47,7 +49,7 @@ func (r *Repo) Find(ctx context.Context, id string) (bidder.Bidder, error) {
 	return toBidder(result), nil
 }
 
-func (r *Repo) Create(ctx context.Context, bidder bidder.Bidder) error {
+func (r *BidderRepository) Create(ctx context.Context, bidder bidder.Bidder) error {
 	q := "insert into bidders (id, name, item) values(?, ?, ?)"
 
 	if _, err := r.db.ExecContext(ctx, q, bidder.ID, bidder.Name, bidder.Item); err != nil {
@@ -57,11 +59,11 @@ func (r *Repo) Create(ctx context.Context, bidder bidder.Bidder) error {
 	return nil
 }
 
-func (r *Repo) Update(ctx context.Context, bidder bidder.Bidder) error {
+func (r *BidderRepository) Update(ctx context.Context, bidder bidder.Bidder) error {
 	q, args, err := prepareUpdateQuery(bidder)
 
 	if err != nil {
-		return fmt.Errorf("Repo.Update failed preparing query %w", err)
+		return fmt.Errorf("BidderRepository.Update failed preparing query %w", err)
 	}
 
 	if _, err = r.db.ExecContext(ctx, q, args...); err != nil {
@@ -97,7 +99,7 @@ func prepareUpdateQuery(bidder bidder.Bidder) (string, []interface{}, error) {
 	return query, args, nil
 }
 
-func (r *Repo) Delete(ctx context.Context, id string) error {
+func (r *BidderRepository) Delete(ctx context.Context, id string) error {
 	q := "delete from bidders-service where id = ?"
 
 	if _, err := r.db.ExecContext(ctx, q, id); err != nil {
@@ -108,7 +110,7 @@ func (r *Repo) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
-func (r *Repo) FindAll(ctx context.Context, request bidder.BiddersRequest) ([]bidder.Bidder, error) {
+func (r *BidderRepository) FindAll(ctx context.Context, request bidder.BiddersRequest) ([]bidder.Bidder, error) {
 	whereParams := prepareWhereQuery(request)
 	q := fmt.Sprintf("SELECT id, name from bidders where %s", whereParams)
 
@@ -132,6 +134,33 @@ func (r *Repo) FindAll(ctx context.Context, request bidder.BiddersRequest) ([]bi
 	}
 
 	return result, nil
+}
+
+func (r *BidderRepository) DeleteMany(ctx context.Context, ids []interface{}) error {
+	q, args := prepareInQuery("id", ids)
+
+	if _, err := r.db.ExecContext(ctx, q, args...); err != nil {
+		r.logger.Error("BidderRepository.DeleteMany failed deleting bidders", zap.Error(err))
+
+		return fmt.Errorf("BidderRepository.DeleteMany %w", err)
+	}
+
+	return nil
+}
+
+func prepareInQuery(col string, vals []interface{}) (string, []interface{}) {
+	q := "delete from auctions where %s in (%s)"
+
+	placeholders := make([]string, len(vals))
+	args := make([]interface{}, len(vals))
+	for i, val := range vals {
+		placeholders[i] = "?"
+		args[i] = val
+	}
+
+	query := fmt.Sprintf(q, col, strings.Join(placeholders, ","))
+
+	return query, args
 }
 
 func parseResults(rows *sql.Rows) ([]BidderDb, error) {

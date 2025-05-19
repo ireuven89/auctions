@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
+	"net/http"
+
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/ireuven89/auctions/bidder-service/bidder"
 	"github.com/julienschmidt/httprouter"
-	"log"
-	"net/http"
 )
 
 type Transport struct {
@@ -71,11 +72,18 @@ func RegisterRoutes(router *httprouter.Router, s Service) {
 		kithttp.EncodeJSONResponse,
 	)
 
+	deleteBiddersHandler := kithttp.NewServer(
+		MakeEndpointDeleteBidders(s),
+		decodeDeleteBiddersRequest,
+		kithttp.EncodeJSONResponse,
+	)
+
 	router.Handler(http.MethodGet, "/bidders/:id", getBidderHandler)
 	router.Handler(http.MethodGet, "/bidders", getBiddersHandler)
 	router.Handler(http.MethodPost, "/bidders", createBidderHandler)
 	router.Handler(http.MethodPut, "/bidders/:id", updateBidderHandler)
 	router.Handler(http.MethodDelete, "/bidders/:id", deleteBidderHandler)
+	router.Handler(http.MethodDelete, "/bidders", deleteBiddersHandler)
 
 }
 
@@ -169,5 +177,17 @@ func decodeDeleteBidderRequest(ctx context.Context, r *http.Request) (request in
 
 	return DeleteBidderRequestModel{
 		id: id,
+	}, nil
+}
+
+func decodeDeleteBiddersRequest(ctx context.Context, r *http.Request) (request interface{}, err error) {
+	var ids []string
+
+	if err = json.NewDecoder(r.Body).Decode(&ids); err != nil {
+		return nil, fmt.Errorf("decodeDeleteBiddersRequest failed casting request")
+	}
+
+	return DeleteBiddersRequestModel{
+		ids: ids,
 	}, nil
 }

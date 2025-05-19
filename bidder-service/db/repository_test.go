@@ -1,9 +1,10 @@
 package db
 
 import (
+	"testing"
+
 	"github.com/ireuven89/auctions/bidder-service/bidder"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 type testUpdateQuery struct {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+
 	"github.com/ireuven89/auctions/auction-service/db"
 	"github.com/ireuven89/auctions/auction-service/internal"
 	"github.com/ireuven89/auctions/shared/config"

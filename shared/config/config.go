@@ -2,8 +2,9 @@ package config
 
 import (
 	"fmt"
-	"github.com/spf13/viper"
 	"os"
+
+	"github.com/spf13/viper"
 )
 
 type Config struct {
@@ -51,5 +52,4 @@ func LoadConfig() (*Config, error) {
 	}
 
 	return config, nil
-
 }

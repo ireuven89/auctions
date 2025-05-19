@@ -4,11 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
+	"time"
+
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/pressly/goose/v3"
 	"github.com/sethvargo/go-retry"
-	"os"
-	"time"
 )
 
 var migrationFolder = "/migrations"
@@ -16,7 +17,6 @@ var databaseName = "auctions"
 
 func MustNewDB(host, user, password string, port int) (*sql.DB, error) {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/", user, password, host, port)
-	println("Test blocked push")
 
 	backoff := retry.WithMaxRetries(5, retry.NewExponential(3*time.Second))
 	var attempt int

@@ -3,6 +3,7 @@ package internal
 import (
 	"context"
 	"fmt"
+
 	"github.com/go-kit/kit/endpoint"
 	"github.com/ireuven89/auctions/bidder-service/bidder"
 )
@@ -110,6 +111,26 @@ func MakeEndpointDeleteBidder(s Service) endpoint.Endpoint {
 		}
 
 		if err = s.DeleteBidder(ctx, req.id); err != nil {
+			return nil, fmt.Errorf("MakeEndpointDeleteBidder %w", err)
+		}
+
+		return nil, nil
+	}
+}
+
+type DeleteBiddersRequestModel struct {
+	ids []string
+}
+
+func MakeEndpointDeleteBidders(s Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req, ok := request.(DeleteBiddersRequestModel)
+
+		if !ok {
+			return nil, fmt.Errorf("MakeEndpointDeleteBidder failed parsing request")
+		}
+
+		if err = s.DeleteBidders(ctx, req.ids); err != nil {
 			return nil, fmt.Errorf("MakeEndpointDeleteBidder %w", err)
 		}
 

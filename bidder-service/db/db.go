@@ -4,12 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	_ "github.com/go-sql-driver/mysql"
-	"github.com/pressly/goose/v3"
-	"github.com/sethvargo/go-retry"
 	"log"
 	"os"
 	"time"
+
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/pressly/goose/v3"
+	"github.com/sethvargo/go-retry"
 )
 
 var migrationFolder = "/migrations"

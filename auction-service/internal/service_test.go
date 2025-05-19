@@ -3,12 +3,14 @@ package internal
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"testing"
+
 	"github.com/google/uuid"
 	"github.com/ireuven89/auctions/auction-service/auction"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/zap"
-	"testing"
 )
 
 // MockRepository mocks the db.Repository interface
@@ -19,6 +21,11 @@ type MockRepository struct {
 func (m *MockRepository) Find(ctx context.Context, id string) (auction.Auction, error) {
 	args := m.Called(ctx, id)
 	return args.Get(0).(auction.Auction), args.Error(1)
+}
+
+func (m *MockRepository) FindAll(ctx context.Context, request auction.AuctionRequest) ([]auction.Auction, error) {
+	args := m.Called(ctx, request)
+	return args.Get(0).([]auction.Auction), args.Error(1)
 }
 
 func (m *MockRepository) Update(ctx context.Context, req auction.AuctionRequest) error {
@@ -33,6 +40,11 @@ func (m *MockRepository) Create(ctx context.Context, req auction.AuctionRequest)
 
 func (m *MockRepository) Delete(ctx context.Context, id string) error {
 	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
+func (m *MockRepository) DeleteMany(ctx context.Context, ids []interface{}) error {
+	args := m.Called(ctx, ids)
 	return args.Error(0)
 }
 
@@ -91,4 +103,25 @@ func TestDeleteAuction(t *testing.T) {
 
 	assert.NoError(t, err)
 	mockRepo.AssertExpectations(t)
+}
+
+func TestVal(t *testing.T) {
+	digits := []int{1, 2, 4, 9}
+	n := len(digits)
+
+	for i := n - 1; i >= 0; i-- {
+		if digits[i] < 9 {
+			digits[i]++
+			fmt.Printf("%v\n", digits)
+			break
+		}
+		digits[i] = 0
+	}
+
+	// If we reach here, it means we had all 9s like 999 → 1000
+	result := make([]int, n+1)
+	result[0] = 1
+	fmt.Printf("%v\n", result)
+
+	//	return digits
 }

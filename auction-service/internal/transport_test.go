@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
 	"github.com/ireuven89/auctions/auction-service/auction"
 	"github.com/ireuven89/auctions/auction-service/internal/mocks"
 	"github.com/julienschmidt/httprouter"
 	"github.com/stretchr/testify/assert"
-	"net/http"
-	"net/http/httptest"
-	"testing"
 )
 
 func TestGetAuction(t *testing.T) {

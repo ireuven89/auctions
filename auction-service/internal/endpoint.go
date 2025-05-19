@@ -3,6 +3,7 @@ package internal
 import (
 	"context"
 	"fmt"
+
 	"github.com/go-kit/kit/endpoint"
 	"github.com/ireuven89/auctions/auction-service/auction"
 )
@@ -31,6 +32,34 @@ func MakeEndpointGetAuction(s Service) endpoint.Endpoint {
 
 		return GetAuctionResponseModel{
 			auction: res,
+		}, nil
+	}
+}
+
+type GetAuctionsRequestModel struct {
+	auction.AuctionRequest
+}
+
+type GetAuctionsResponseModel struct {
+	auctions []auction.Auction
+}
+
+func MakeEndpointGetAuctions(s Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req, ok := request.(GetAuctionsRequestModel)
+		if !ok {
+			return nil, fmt.Errorf("MakeEndpointGetAuctions.failed parsing request")
+		}
+
+		res, err := s.Search(ctx, req.AuctionRequest)
+
+		if err != nil {
+
+			return nil, fmt.Errorf("MakeEndpointGetAuctions %w", err)
+		}
+
+		return GetAuctionsResponseModel{
+			auctions: res,
 		}, nil
 	}
 }
@@ -96,6 +125,27 @@ func MakeEndpointDeleteAuction(s Service) endpoint.Endpoint {
 
 		if err != nil {
 			return nil, err
+		}
+
+		return nil, nil
+	}
+}
+
+type DeleteAuctionsRequestModel struct {
+	ids []string
+}
+
+func MakeEndpointDeleteAuctions(s Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req, ok := request.(DeleteAuctionsRequestModel)
+		if !ok {
+			return nil, fmt.Errorf("MakeEndpointDeleteAuctions.failed parsing request")
+		}
+
+		err = s.DeleteMany(ctx, req.ids)
+
+		if err != nil {
+			return nil, fmt.Errorf("MakeEndpointDeleteAuctions failed deleting %w", err)
 		}
 
 		return nil, nil

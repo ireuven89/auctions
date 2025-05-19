@@ -3,6 +3,7 @@ package internal
 import (
 	"context"
 	"fmt"
+
 	"github.com/google/uuid"
 	"github.com/ireuven89/auctions/bidder-service/bidder"
 	"github.com/ireuven89/auctions/bidder-service/db"
@@ -13,6 +14,7 @@ type Service interface {
 	GetBidder(ctx context.Context, id string) (bidder.Bidder, error)
 	SearchBidders(ctx context.Context, request bidder.BiddersRequest) ([]bidder.Bidder, error)
 	DeleteBidder(ctx context.Context, id string) error
+	DeleteBidders(ctx context.Context, ids []string) error
 	CreateBidder(ctx context.Context, bidder bidder.Bidder) (string, error)
 	UpdateBidder(ctx context.Context, bidder bidder.Bidder) error
 }
@@ -84,4 +86,18 @@ func (s *BidderService) SearchBidders(ctx context.Context, req bidder.BiddersReq
 	}
 
 	return bidders, nil
+}
+
+func (s *BidderService) DeleteBidders(ctx context.Context, ids []string) error {
+	var vals []interface{}
+
+	for _, id := range ids {
+		vals = append(vals, id)
+	}
+
+	if err := s.repo.DeleteMany(ctx, vals); err != nil {
+		return fmt.Errorf("BidderService.DeleteBidders %w", err)
+	}
+
+	return nil
 }

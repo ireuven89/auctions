@@ -1,0 +1,8 @@
+server:
+  port: "8090"
+
+database:
+  host: "https://env.prod.com"
+  user: "root"
+  password: "admin"
+  port: 3308
