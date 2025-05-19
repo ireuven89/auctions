@@ -16,7 +16,6 @@ var databaseName = "auctions"
 
 func MustNewDB(host, user, password string, port int) (*sql.DB, error) {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/", user, password, host, port)
-	println("Test blocked push")
 
 	backoff := retry.WithMaxRetries(5, retry.NewExponential(3*time.Second))
 	var attempt int
