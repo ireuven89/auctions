@@ -82,7 +82,7 @@ func MakeEndpointCreateAuction(s Service) endpoint.Endpoint {
 		res, err := s.Create(ctx, req.AuctionRequest)
 
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("MakeEndpointCreateAuction %w", err)
 		}
 
 		return CreateAuctionResponseModel{id: res}, nil
@@ -103,7 +103,7 @@ func MakeEndpointUpdateAuction(s Service) endpoint.Endpoint {
 		err = s.Update(ctx, req.AuctionRequest)
 
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("MakeEndpointUpdateAuction %w", err)
 		}
 
 		return nil, nil

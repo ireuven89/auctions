@@ -39,7 +39,7 @@ func (r *BidderRepository) Find(ctx context.Context, id string) (bidder.Bidder, 
 	row := r.db.QueryRowContext(ctx, q, id)
 
 	if row.Err() != nil {
-		return bidder.Bidder{}, row.Err()
+		return bidder.Bidder{}, fmt.Errorf("BidderRepository.Find %w", row.Err())
 	}
 
 	if err := row.Scan(&result.ID, &result.Name, &result.Item); err != nil {
@@ -54,7 +54,7 @@ func (r *BidderRepository) Create(ctx context.Context, bidder bidder.Bidder) err
 
 	if _, err := r.db.ExecContext(ctx, q, bidder.ID, bidder.Name, bidder.Item); err != nil {
 		r.logger.Error("Create failed inserting to ", zap.Error(err))
-		return err
+		return fmt.Errorf("BidderRepository.Create %w", err)
 	}
 	return nil
 }
@@ -104,7 +104,7 @@ func (r *BidderRepository) Delete(ctx context.Context, id string) error {
 
 	if _, err := r.db.ExecContext(ctx, q, id); err != nil {
 		r.logger.Error("failed deleting bidder ", zap.Error(err), zap.String("id", id))
-		return err
+		return fmt.Errorf("BidderRepository.Delete %w", err)
 	}
 
 	return nil

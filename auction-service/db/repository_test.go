@@ -3,6 +3,8 @@ package db
 import (
 	"context"
 	"regexp"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
@@ -58,6 +60,11 @@ func TestRepo_FindAll(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
 	defer db.Close()
+
+	s := strings.TrimSpace("     -042")
+	res, err := strconv.ParseInt(s, 10, 64)
+
+	println(res)
 
 	logger := zaptest.NewLogger(t)
 	r := &AuctionRepository{
