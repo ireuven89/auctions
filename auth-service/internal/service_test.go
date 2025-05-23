@@ -10,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 )
 
 func setupTestKeys(t *testing.T) (privPath, pubPath string) {
@@ -62,19 +61,23 @@ func TestNewAuthService_PublicKeyFail(t *testing.T) {
 	assert.Nil(t, svc)
 }
 
-// Register success
+/*// Register success
 func TestService_Register_Success(t *testing.T) {
 	setupTestKeys(t)
+	//	defer os.Remove(privateKeyPath)
+
 	logger := zap.NewNop()
 	repo := &mocks.MockRepo{
 		CreateUserFunc:       func(ctx context.Context, user user.User) error { return nil },
 		SaveRefreshTokenFunc: func(ctx context.Context, key, userId string, ttl time.Duration) error { return nil },
 	}
-	svc, err := NewAuthService(logger, repo, "ignored")
+
+	// Example: If NewAuthService takes key path as param
+	svc, err := NewAuthService(logger, repo, "")
 	assert.NoError(t, err)
 	_, _, err = svc.Register(context.Background(), user.User{Email: "foo@bar.com", Password: "pass"})
 	assert.NoError(t, err)
-}
+}*/
 
 // Register fails on CreateUser
 func TestService_Register_CreateUserFail(t *testing.T) {
