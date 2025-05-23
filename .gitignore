@@ -4,6 +4,8 @@ bidder-service/vendor
 
 auction-service/vendor
 
+auth-service/vendor
+
 #developer
 .idea/
 !*.iml
