@@ -18,4 +18,13 @@ type Token struct {
 	Refresh string
 }
 
-var ErrNotFound = errors.New("token not found")
+var (
+	ErrUserNotFound       = errors.New("user not found or credentials missing")
+	ErrInvalidCredentials = errors.New("invalid credentials")
+)
+
+// Authorization errors (token required)
+var (
+	ErrInvalidToken = errors.New("unauthorized: invalid token")
+	ErrExpiredToken = errors.New("unauthorized: expired token")
+)

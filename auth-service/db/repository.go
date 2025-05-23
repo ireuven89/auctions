@@ -103,7 +103,7 @@ func (r *UserRepo) GetToken(ctx context.Context, token string) (string, error) {
 
 	if err != nil {
 		if err == redis.Nil {
-			return "", key.ErrNotFound
+			return "", key.ErrExpiredToken
 		}
 
 		return "", fmt.Errorf("UserRepo.GetToken")

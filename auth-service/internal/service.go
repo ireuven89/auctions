@@ -207,8 +207,8 @@ func (s *service) Register(ctx context.Context, userCredentials user.User) (stri
 func (s *service) RefreshToken(ctx context.Context, refreshToken string) (string, error) {
 	userId, err := s.repository.GetToken(ctx, "refresh:"+refreshToken)
 	if err != nil {
-		s.logger.Error("service.RefreshToken", zap.Error(err))
-		return "", fmt.Errorf("RefreshToken invalid or expired token %w", err)
+		s.logger.Error("service.RefreshToken", zap.Error(err), zap.String("token", refreshToken))
+		return "", key.ErrExpiredToken
 	}
 
 	user, err := s.repository.FindUser(ctx, userId)
@@ -222,7 +222,7 @@ func (s *service) RefreshToken(ctx context.Context, refreshToken string) (string
 
 	if err != nil {
 		s.logger.Error("service.RefreshToken", zap.Error(err))
-		return "", fmt.Errorf("RefreshToken failed refreshong token %w", err)
+		return "", fmt.Errorf("RefreshToken failed refreshing token %w", err)
 	}
 
 	return accessToken, nil
@@ -261,11 +261,13 @@ func (s *service) Login(ctx context.Context, identifier, password string) (*key.
 	user, err := s.repository.FindUserByCredentials(ctx, identifier)
 
 	if err != nil {
-		return nil, fmt.Errorf("service.Login user not found result %w", err)
+		s.logger.Error("service.Login unauthorized user", zap.Error(err), zap.String("identifier", identifier))
+		return nil, key.ErrInvalidCredentials
 	}
 
 	if ok := verifyUser(user.Password, password); !ok {
-		return nil, fmt.Errorf("service.Login invalid password")
+		s.logger.Error("service.Login unauthorized user", zap.Error(err), zap.String("identifier", identifier))
+		return nil, key.ErrInvalidCredentials
 	}
 
 	accessToken, err := s.SignToken(ctx, *user)

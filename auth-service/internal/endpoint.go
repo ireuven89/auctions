@@ -2,6 +2,7 @@ package internal
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/ireuven89/auctions/auth-service/user"
@@ -76,7 +77,12 @@ func MakeEndpointLogin(s Service) endpoint.Endpoint {
 		token, err := s.Login(ctx, req.Identifier, req.Password)
 
 		if err != nil {
-			return nil, fmt.Errorf("MakeEndpointLogin %w", err)
+			// Pass through ErrUnauthorized for the transport to handle as 401
+			if errors.Is(err, key.ErrInvalidCredentials) || errors.Is(err, key.ErrUserNotFound) {
+				return nil, err
+			}
+			// Wrap all other errors
+			return nil, fmt.Errorf("MakeEndpointLogin: %w", err)
 		}
 
 		return LoginResponseModel{

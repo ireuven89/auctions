@@ -3,7 +3,9 @@ package internal
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/ireuven89/auctions/auth-service/key"
 	"log"
 	"net/http"
 
@@ -41,30 +43,35 @@ func RegisterRoutes(router *httprouter.Router, s Service) {
 		MakeEndpointRegisterUser(s),
 		decodeRegisterUserRequest,
 		encodeRegisterUserResponse,
+		kithttp.ServerErrorEncoder(errorEncoder),
 	)
 
 	loginHandler := kithttp.NewServer(
 		MakeEndpointLogin(s),
-		decodeLogoutRequest,
-		encodeLogoutUserResponse,
+		decodeLoginRequest,
+		encodeLoginUserResponse,
+		kithttp.ServerErrorEncoder(errorEncoder),
 	)
 
 	refreshHandler := kithttp.NewServer(
 		MakeEndpointRefreshToken(s),
 		decodeRefreshRequest,
 		encodeRefreshResponse,
+		kithttp.ServerErrorEncoder(errorEncoder),
 	)
 
 	logoutHandler := kithttp.NewServer(
 		MakeEndpointLogout(s),
 		decodeRegisterUserRequest,
 		encodeRegisterUserResponse,
+		kithttp.ServerErrorEncoder(errorEncoder),
 	)
 
 	publicKeyHandler := kithttp.NewServer(
 		MakeEndpointGetPublicKey(s),
 		decodeGetPublicRequest,
 		encodeGetPublicResponse,
+		kithttp.ServerErrorEncoder(errorEncoder),
 	)
 
 	router.Handler(http.MethodPost, "/auth/register", registerUserHandler)
@@ -202,4 +209,21 @@ func encodeRefreshResponse(ctx context.Context, w http.ResponseWriter, response 
 	w.Header().Set("Content-Type", "application/json")
 
 	return json.NewEncoder(w).Encode(formatted)
+}
+
+func errorEncoder(ctx context.Context, err error, w http.ResponseWriter) {
+	switch {
+	case errors.Is(err, key.ErrUserNotFound),
+		errors.Is(err, key.ErrInvalidCredentials):
+		w.WriteHeader(http.StatusUnauthorized) // 401
+
+	case errors.Is(err, key.ErrInvalidToken),
+		errors.Is(err, key.ErrExpiredToken):
+		w.WriteHeader(http.StatusUnauthorized) // 401
+
+	default:
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+	_ = json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+
 }
