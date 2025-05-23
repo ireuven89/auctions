@@ -5,9 +5,13 @@ name: Go
 
 on:
   push:
-    branches: [ "main" ]
+    paths:
+      - 'auction-service/**'
+      - '.github/workflows/auction-service.yml'
   pull_request:
-    branches: [ "main" ]
+    paths:
+      - 'auction-service/**'
+      - '.github/workflows/auction-service.yml'
 
 jobs:
 
