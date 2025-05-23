@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"testing"
+
 	"github.com/ireuven89/auctions/auction-service/auction"
 	"github.com/ireuven89/auctions/auction-service/internal/mocks"
-	"testing"
 )
 
 func TestMakeEndpointGetAuction(t *testing.T) {

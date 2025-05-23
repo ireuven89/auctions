@@ -4,11 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"testing"
+
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/ireuven89/auctions/bidder-service/bidder"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
-	"testing"
 )
 
 type testUpdateQuery struct {
@@ -20,21 +21,21 @@ type testUpdateQuery struct {
 }
 
 func TestPrepareUpdateQuery(t *testing.T) {
-	tests := []testUpdateQuery{{
-		Name:          "failed query",
-		request:       bidder.Bidder{ID: "test-id", Name: "name", Item: "item"},
-		ExpectedQuery: "UPDATE bidders SET name = ?, item = ? WHERE id = ?",
-		ExpectedArgs:  []interface{}{"name", "item", "test-id"},
-		WantErr:       false,
-	},
+	tests := []testUpdateQuery{
 		{
-			Name:          "no args query",
+			Name:          "failed query",
+			request:       bidder.Bidder{ID: "test-id", Name: "name", Item: "item"},
+			ExpectedQuery: "UPDATE bidders SET name = ?, item = ? WHERE id = ?",
+			ExpectedArgs:  []interface{}{"name", "item", "test-id"},
+			WantErr:       false,
+		},
+		{
+			Name:          "failed query",
 			request:       bidder.Bidder{ID: "test-id"},
 			ExpectedQuery: "",
 			ExpectedArgs:  nil,
 			WantErr:       true,
 		},
-		{},
 	}
 
 	for _, test := range tests {

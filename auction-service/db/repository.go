@@ -1,14 +1,16 @@
 package db
 
 import (
+	"github.com/ireuven89/auctions/auction-service/auction"
+
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/ireuven89/auctions/auction-service/auction"
-	"go.uber.org/zap"
 	"log"
 	"strings"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 type AuctionDB struct {
@@ -32,28 +34,29 @@ type Repository interface {
 	Update(ctx context.Context, auction auction.AuctionRequest) error
 	Create(ctx context.Context, auction auction.AuctionRequest) error
 	Delete(ctx context.Context, id string) error
+	DeleteMany(ctx context.Context, ids []interface{}) error
 }
 
-type Repo struct {
+type AuctionRepository struct {
 	logger *zap.Logger
 	db     *sql.DB
 }
 
 func NewRepository(db *sql.DB, logger *zap.Logger) Repository {
 
-	return &Repo{
+	return &AuctionRepository{
 		logger: logger,
 		db:     db,
 	}
 }
 
-func (r *Repo) Find(ctx context.Context, id string) (auction.Auction, error) {
+func (r *AuctionRepository) Find(ctx context.Context, id string) (auction.Auction, error) {
 	var result AuctionDB
 	start := time.Now()
 
 	q := "select id, name from auctions where id = ?"
 
-	r.logger.Debug(q)
+	r.logger.Debug("AuctionRepository.Find ", zap.Any("query", q), zap.Any("args", id))
 
 	defer func() {
 		log.Printf("Query took %s: %s", time.Since(start), q)
@@ -62,7 +65,7 @@ func (r *Repo) Find(ctx context.Context, id string) (auction.Auction, error) {
 	row := r.db.QueryRowContext(ctx, q, id)
 
 	if row.Err() != nil {
-		r.logger.Error("failed fetching result ", zap.Error(row.Err()), zap.String("id", id))
+		r.logger.Error("AuctionRepository.Find failed fetching result ", zap.Error(row.Err()), zap.String("id", id))
 		return auction.Auction{}, row.Err()
 	}
 
@@ -74,23 +77,25 @@ func (r *Repo) Find(ctx context.Context, id string) (auction.Auction, error) {
 	return toAuction(result), nil
 }
 
-func (r *Repo) FindAll(ctx context.Context, request auction.AuctionRequest) ([]auction.Auction, error) {
+func (r *AuctionRepository) FindAll(ctx context.Context, request auction.AuctionRequest) ([]auction.Auction, error) {
 	var result []auction.Auction
 	whereParams := prepareSearchQuery(request)
 	q := fmt.Sprintf("SELECT id, name, bidder_id from auctions where %s", whereParams)
 
+	r.logger.Debug("AuctionRepository.FindAll", zap.String("query", q))
+
 	rows, err := r.db.QueryContext(ctx, q)
 
 	if err != nil {
-		r.logger.Error("Repo.FindAll failed to query", zap.Error(err))
-		return nil, fmt.Errorf("Repo.FindAll failed to detch results %w", err)
+		r.logger.Error("AuctionRepository.FindAll failed to query", zap.Error(err))
+		return nil, fmt.Errorf("AuctionRepository.FindAll failed to detch results %w", err)
 	}
 
 	for rows.Next() {
 		var auctionDB AuctionDB
 		if err = rows.Scan(&auctionDB.ID, &auctionDB.Name, &auctionDB.BidderId); err != nil {
 			r.logger.Error("FindAll failed to cast results", zap.Error(err))
-			return nil, fmt.Errorf("Repo.FindAll %w", err)
+			return nil, fmt.Errorf("AuctionRepository.FindAll %w", err)
 		}
 		result = append(result, toAuction(auctionDB))
 	}
@@ -108,21 +113,21 @@ func prepareSearchQuery(request auction.AuctionRequest) string {
 	return where.String()
 }
 
-func (r *Repo) Update(ctx context.Context, auction auction.AuctionRequest) error {
+func (r *AuctionRepository) Update(ctx context.Context, auction auction.AuctionRequest) error {
 	q, args, err := buildUpdateQuery(auction)
 
-	r.logger.Debug(q)
+	r.logger.Debug("AuctionRepository.Update", zap.String("query", q), zap.Any("args", args))
 
 	if err != nil {
-		r.logger.Error("Update. failed to update query ", zap.Error(err))
+		r.logger.Error("AuctionRepository.Update failed to update query ", zap.Error(err))
 		return err
 	}
 
 	_, err = r.db.ExecContext(ctx, q, args...)
 
 	if err != nil {
-		r.logger.Error("Update. failed update query ", zap.Error(err))
-		return err
+		r.logger.Error("AuctionRepositoryUpdate. failed update query ", zap.Error(err))
+		return fmt.Errorf("AuctionRepository.Update failed updating %w", err)
 	}
 
 	return nil
@@ -148,27 +153,64 @@ func buildUpdateQuery(auction auction.AuctionRequest) (string, []interface{}, er
 	return query, args, nil
 }
 
-func (r *Repo) Create(ctx context.Context, auction auction.AuctionRequest) error {
-	q := "insert into auctions (id, name) values(?, ?)"
+func (r *AuctionRepository) Create(ctx context.Context, auction auction.AuctionRequest) error {
+	q := "insert into auctions (id, name, bidder_id) values(?, ?, ?)"
+
+	r.logger.Debug("AuctionRepository.Create", zap.String("query", q), zap.Any("args", auction))
 
 	_, err := r.db.ExecContext(ctx, q, auction.ID, auction.Name)
 
 	if err != nil {
-		r.logger.Error("Create.failed to insert ", zap.Error(err))
-		return err
+		r.logger.Error("AuctionRepository.Create failed to insert ", zap.Error(err))
+		return fmt.Errorf("AuctionRepository.Create failed creating %w", err)
 	}
 
 	return nil
 }
 
-func (r *Repo) Delete(ctx context.Context, id string) error {
+func (r *AuctionRepository) Delete(ctx context.Context, id string) error {
 	q := "delete from auctions where id = ?"
+	startTime := time.Now()
+
+	r.logger.Debug("AuctionRepository.Delete", zap.String("query", q), zap.Any("args", id))
 
 	_, err := r.db.ExecContext(ctx, q, id)
 
 	if err != nil {
-		return err
+		return fmt.Errorf("AuctionRepository.Delete failed deleting %w", err)
 	}
 
+	endTime := time.Now()
+	r.logger.Debug(fmt.Sprintf("query took %v", endTime.Sub(startTime)))
+
 	return nil
+}
+func (r *AuctionRepository) DeleteMany(ctx context.Context, ids []interface{}) error {
+	q, args := prepareInQuery("id", ids)
+	startTime := time.Now()
+	r.logger.Debug("AuctionRepository.DeleteMany", zap.String("query", q), zap.Any("args", args))
+
+	if _, err := r.db.ExecContext(ctx, q, args...); err != nil {
+		r.logger.Error("AuctionRepository.DeleteMany failed deleting", zap.Error(err))
+		return fmt.Errorf("AuctionRepository.DeleteMany failed deleting %w", err)
+	}
+
+	endTime := time.Now()
+	r.logger.Debug(fmt.Sprintf("query took %v", endTime.Sub(startTime)))
+	return nil
+}
+
+func prepareInQuery(col string, vals []interface{}) (string, []interface{}) {
+	q := "delete from auctions where %s in (%s)"
+
+	placeholders := make([]string, len(vals))
+	args := make([]interface{}, len(vals))
+	for i, val := range vals {
+		placeholders[i] = "?"
+		args[i] = val
+	}
+
+	query := fmt.Sprintf(q, col, strings.Join(placeholders, ","))
+
+	return query, args
 }

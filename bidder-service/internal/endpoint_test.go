@@ -2,10 +2,11 @@ package internal
 
 import (
 	"context"
+	"testing"
+
 	"github.com/ireuven89/auctions/bidder-service/bidder"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"testing"
 )
 
 type mockService struct {
@@ -34,6 +35,11 @@ func (m *mockService) SearchBidders(ctx context.Context, request bidder.BiddersR
 	args := m.Called(ctx, request)
 
 	return args.Get(0).([]bidder.Bidder), args.Error(1)
+}
+
+func (m *mockService) DeleteBidders(ctx context.Context, request []string) error {
+
+	return m.Called(ctx, request).Error(0)
 }
 
 func TestMakeEndpointGetBidder(t *testing.T) {

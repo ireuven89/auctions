@@ -1,0 +1,9 @@
+
+#vendor folders
+bidder-service/vendor
+
+auction-service/vendor
+
+#developer
+.idea/
+!*.iml

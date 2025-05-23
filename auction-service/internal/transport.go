@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
+	"net/http"
+
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/ireuven89/auctions/auction-service/auction"
 	"github.com/julienschmidt/httprouter"
-	"log"
-	"net/http"
 )
 
 var errNotFound = errors.New("not found")
@@ -51,9 +52,9 @@ func RegisterRoutes(router *httprouter.Router, s Service) {
 	)
 
 	getAuctionsHandler := kithttp.NewServer(
-		MakeEndpointFindAuctions(s),
-		decodeGetAuctionRequest,
-		encodeGetAuctionResponse,
+		MakeEndpointGetAuctions(s),
+		decodeGetAuctionsRequest,
+		encodeGetAuctionsResponse,
 		kithttp.ServerErrorEncoder(errorEncoder),
 	)
 
@@ -78,24 +79,52 @@ func RegisterRoutes(router *httprouter.Router, s Service) {
 		kithttp.ServerErrorEncoder(errorEncoder),
 	)
 
+	deleteAuctionsHandler := kithttp.NewServer(
+		MakeEndpointDeleteAuctions(s),
+		decodeDeleteAuctionsRequest,
+		kithttp.EncodeJSONResponse,
+		kithttp.ServerErrorEncoder(errorEncoder),
+	)
+
 	router.Handler(http.MethodGet, "/auctions/:id", getAuctionHandler)
 	router.Handler(http.MethodGet, "/auctions", getAuctionsHandler)
 	router.Handler(http.MethodPost, "/auctions", createAuctionHandler)
 	router.Handler(http.MethodPut, "/auctions/:id", updateAuctionHandler)
 	router.Handler(http.MethodDelete, "/auctions/:id", deleteAuctionHandler)
+	router.Handler(http.MethodDelete, "/auctions", deleteAuctionsHandler)
 }
 
 func decodeGetAuctionRequest(c context.Context, r *http.Request) (interface{}, error) {
-	var req auction.AuctionRequest
-	name := r.URL.Query().Get("name")
-
-	req.Name = name
-	return GetAuctionsRequestModel{
-		AuctionRequest: req,
+	id := httprouter.ParamsFromContext(c).ByName("id")
+	return GetAuctionRequestModel{
+		id: id,
 	}, nil
 }
 
 func encodeGetAuctionResponse(c context.Context, w http.ResponseWriter, response interface{}) error {
+	res, ok := response.(GetAuctionResponseModel)
+
+	if !ok {
+		return fmt.Errorf("encodeGetAuctionResponse failed parsing reponse")
+	}
+
+	formatted := formatAuction(res.auction)
+
+	return json.NewEncoder(w).Encode(&formatted)
+}
+
+func decodeGetAuctionsRequest(c context.Context, r *http.Request) (interface{}, error) {
+
+	name := r.URL.Query().Get("name")
+
+	return GetAuctionsRequestModel{
+		AuctionRequest: auction.AuctionRequest{
+			Name: name,
+		},
+	}, nil
+}
+
+func encodeGetAuctionsResponse(c context.Context, w http.ResponseWriter, response interface{}) error {
 	res, ok := response.(GetAuctionsResponseModel)
 
 	if !ok {
@@ -107,25 +136,6 @@ func encodeGetAuctionResponse(c context.Context, w http.ResponseWriter, response
 	for _, auct := range res.auctions {
 		formatted = append(formatted, formatAuction(&auct))
 	}
-
-	return json.NewEncoder(w).Encode(&formatted)
-}
-
-func decodeGetAuctionsRequest(c context.Context, r *http.Request) (interface{}, error) {
-	id := r.RequestURI
-	return GetAuctionRequestModel{
-		id: id,
-	}, nil
-}
-
-func encodeGetAuctionsResponse(c context.Context, w http.ResponseWriter, response interface{}) error {
-	res, ok := response.(GetAuctionResponseModel)
-
-	if !ok {
-		return fmt.Errorf("encodeGetAuctionResponse failed parsing reponse")
-	}
-
-	formatted := formatAuction(res.auction)
 
 	return json.NewEncoder(w).Encode(&formatted)
 }
@@ -175,6 +185,19 @@ func decodeDeleteAuctionRequest(c context.Context, r *http.Request) (interface{}
 	}
 
 	return req, nil
+}
+
+func decodeDeleteAuctionsRequest(c context.Context, r *http.Request) (interface{}, error) {
+	var ids []string
+
+	if err := json.NewDecoder(r.Body).Decode(&ids); err != nil {
+		fmt.Printf("decodeDeleteAuctionsRequest failed decoding request %v", err)
+		return nil, fmt.Errorf("decodeDeleteAuctionsRequest %w", err)
+	}
+
+	return DeleteAuctionsRequestModel{
+		ids: ids,
+	}, nil
 }
 
 func errorEncoder(_ context.Context, err error, w http.ResponseWriter) {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+
 	"github.com/google/uuid"
 	"github.com/ireuven89/auctions/auction-service/auction"
 	"github.com/ireuven89/auctions/auction-service/db"
@@ -16,6 +17,7 @@ type Service interface {
 	Update(ctx context.Context, auction auction.AuctionRequest) error
 	Create(ctx context.Context, auction auction.AuctionRequest) (string, error)
 	Delete(ctx context.Context, id string) error
+	DeleteMany(ctx context.Context, ids []string) error
 }
 
 type AuctionService struct {
@@ -71,7 +73,7 @@ func (s *AuctionService) Create(ctx context.Context, auction auction.AuctionRequ
 	auction.ID = generateID()
 
 	if err := s.repo.Create(ctx, auction); err != nil {
-		s.logger.Error("failed to create auction ", zap.Error(err))
+		s.logger.Error("AuctionService.Failed to create auction ", zap.Error(err))
 		return "", fmt.Errorf("AuctionService.Create failed creating %w", err)
 	}
 
@@ -88,6 +90,21 @@ func (s *AuctionService) Delete(ctx context.Context, id string) error {
 	if err := s.repo.Delete(ctx, id); err != nil {
 		s.logger.Error("AuctionService.Delete failed deleting bidder", zap.Error(err))
 		return fmt.Errorf("AuctionService.Delete failed deleting %w", err)
+	}
+
+	return nil
+}
+
+func (s *AuctionService) DeleteMany(ctx context.Context, ids []string) error {
+	var vals []interface{}
+
+	for _, id := range ids {
+		vals = append(vals, id)
+	}
+
+	if err := s.repo.DeleteMany(ctx, vals); err != nil {
+		s.logger.Error("AuctionService.DeleteMany failed deleting ids", zap.Error(err))
+		return fmt.Errorf("AuctionService.DeleteMany failed deleting %w", err)
 	}
 
 	return nil

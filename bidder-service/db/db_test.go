@@ -1,12 +1,20 @@
 package db
 
-/*func TestMigrate(t *testing.T) {
+import (
+	"os"
+	"testing"
+
+	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestMigrate(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	assert.NoError(t, err)
 	defer db.Close()
 
 	// Use temporary migration folder
-	os.Setenv("MIGRATIONS_DIR", "./test_migrations")
+	//os.Setenv("MIGRATIONS_DIR", "./test_migrations")
 
 	// goose expects a real *sql.DB with a registered driver name
 	//	sqlDB := goose.WrapDB(db)
@@ -48,4 +56,4 @@ func TestMain(m *testing.M) {
 	code := m.Run()
 
 	os.Exit(code)
-}*/
+}

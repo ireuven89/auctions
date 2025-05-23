@@ -91,32 +91,32 @@ func TestGoRoutines(t *testing.T) {
 		find(name, i.Characters)
 	}
 
-	/*	var page int
-		for {
-			var currResponse Response
+	var page int
+	for {
+		var currResponse Response
 
-			url := fmt.Sprintf(baseUrl, page)
-			res, err := http.Get(url)
+		url := fmt.Sprintf(baseUrl, page)
+		res, err := http.Get(url)
 
-			if err != nil {
-				fmt.Printf("failed to get page")
-				break
-			}
+		if err != nil {
+			fmt.Printf("failed to get page")
+			break
+		}
 
-			if err = json.NewDecoder(res.Body).Decode(&currResponse); err != nil {
-				fmt.Printf("failed to get page %v", page)
-				continue
-			}
+		if err = json.NewDecoder(res.Body).Decode(&currResponse); err != nil {
+			fmt.Printf("failed to get page %v", page)
+			continue
+		}
 
-			if len(currResponse.Characters) == 0 {
-				fmt.Printf("finished \n")
-				break
-			}
+		if len(currResponse.Characters) == 0 {
+			fmt.Printf("finished \n")
+			break
+		}
 
-			find(name, currResponse.Characters)
+		find(name, currResponse.Characters)
 
-			page++
-		}*/
+		page++
+	}
 
 	end := time.Now()
 

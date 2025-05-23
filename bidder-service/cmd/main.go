@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+
 	"github.com/ireuven89/auctions/bidder-service/db"
 	"github.com/ireuven89/auctions/bidder-service/internal"
 	"github.com/ireuven89/auctions/shared/config"
@@ -28,5 +29,6 @@ func main() {
 	service := internal.NewService(repo, logger)
 	transport := internal.NewTransport(router, service)
 
-	transport.ListenAndServe("8090")
+	transport.ListenAndServe(cfg.Server.Port)
+
 }

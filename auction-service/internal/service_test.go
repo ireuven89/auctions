@@ -3,12 +3,13 @@ package internal
 import (
 	"context"
 	"database/sql"
+	"testing"
+
 	"github.com/google/uuid"
 	"github.com/ireuven89/auctions/auction-service/auction"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/zap"
-	"testing"
 )
 
 // MockRepository mocks the db.Repository interface
@@ -19,6 +20,11 @@ type MockRepository struct {
 func (m *MockRepository) Find(ctx context.Context, id string) (auction.Auction, error) {
 	args := m.Called(ctx, id)
 	return args.Get(0).(auction.Auction), args.Error(1)
+}
+
+func (m *MockRepository) FindAll(ctx context.Context, request auction.AuctionRequest) ([]auction.Auction, error) {
+	args := m.Called(ctx, request)
+	return args.Get(0).([]auction.Auction), args.Error(1)
 }
 
 func (m *MockRepository) Update(ctx context.Context, req auction.AuctionRequest) error {
@@ -36,10 +42,9 @@ func (m *MockRepository) Delete(ctx context.Context, id string) error {
 	return args.Error(0)
 }
 
-func (m *MockRepository) FindAll(ctx context.Context, request auction.AuctionRequest) ([]auction.Auction, error) {
-	args := m.Called(ctx, request)
-
-	return args.Get(0).([]auction.Auction), args.Error(1)
+func (m *MockRepository) DeleteMany(ctx context.Context, ids []interface{}) error {
+	args := m.Called(ctx, ids)
+	return args.Error(0)
 }
 
 func TestCreateAuction(t *testing.T) {

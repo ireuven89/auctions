@@ -2,13 +2,16 @@ package db
 
 import (
 	"context"
+	"regexp"
+	"strconv"
+	"strings"
+	"testing"
+
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/ireuven89/auctions/auction-service/auction"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
-	"regexp"
-	"testing"
 )
 
 type TestUpdate struct {
@@ -58,8 +61,13 @@ func TestRepo_FindAll(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 
+	s := strings.TrimSpace("     -042")
+	res, err := strconv.ParseInt(s, 10, 64)
+
+	println(res)
+
 	logger := zaptest.NewLogger(t)
-	r := &Repo{
+	r := &AuctionRepository{
 		db:     db,
 		logger: logger,
 	}
