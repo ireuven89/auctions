@@ -6,9 +6,13 @@ name: Go
 
 on:
   push:
-    branches: [ "main" ]
+    paths:
+      - 'bidder-service/**'
+      - '.github/workflows/bidder-service.yml'
   pull_request:
-    branches: [ "main" ]
+    paths:
+      - 'bidder-service/**'
+      - '.github/workflows/bidder-service.yml'
 
 jobs:
 
