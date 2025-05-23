@@ -35,6 +35,34 @@ func MakeEndpointGetAuction(s Service) endpoint.Endpoint {
 	}
 }
 
+type GetAuctionsRequestModel struct {
+	auction.AuctionRequest
+}
+
+type GetAuctionsResponseModel struct {
+	auctions []auction.Auction
+}
+
+func MakeEndpointFindAuctions(s Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req, ok := request.(GetAuctionsRequestModel)
+		if !ok {
+			return nil, fmt.Errorf("MakeEndpointFindAuctions.failed parsing request")
+		}
+
+		res, err := s.Search(ctx, req.AuctionRequest)
+
+		if err != nil {
+
+			return nil, fmt.Errorf("MakeEndpointFindAuctions %w", err)
+		}
+
+		return GetAuctionsResponseModel{
+			auctions: res,
+		}, nil
+	}
+}
+
 type CreateAuctionRequestModel struct {
 	auction.AuctionRequest
 }

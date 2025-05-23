@@ -36,6 +36,12 @@ func (m *MockRepository) Delete(ctx context.Context, id string) error {
 	return args.Error(0)
 }
 
+func (m *MockRepository) FindAll(ctx context.Context, request auction.AuctionRequest) ([]auction.Auction, error) {
+	args := m.Called(ctx, request)
+
+	return args.Get(0).([]auction.Auction), args.Error(1)
+}
+
 func TestCreateAuction(t *testing.T) {
 	mockRepo := new(MockRepository)
 	logger := zap.NewNop()

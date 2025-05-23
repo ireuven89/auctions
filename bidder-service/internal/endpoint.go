@@ -41,7 +41,11 @@ type GetBiddersResponseModel struct {
 
 func MakeEndpointGetBidders(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
-		req := request.(GetBiddersRequestModel)
+		req, ok := request.(GetBiddersRequestModel)
+
+		if !ok {
+			return nil, fmt.Errorf("MakeEndpointGetBidders failed casting request")
+		}
 
 		result, err := s.SearchBidders(ctx, req.BiddersRequest)
 
