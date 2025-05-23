@@ -94,7 +94,7 @@ func TestEncodeLoginUserResponse_Success(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	var m map[string]string
-	if err := json.Unmarshal(w.Body.Bytes(), &m); err != nil {
+	if err = json.Unmarshal(w.Body.Bytes(), &m); err != nil {
 		t.Fatalf("invalid JSON: %v", err)
 	}
 	if m["token"] != "tok" || m["refreshToken"] != "ref" {
@@ -122,18 +122,22 @@ func TestDecodeGetPublicRequest(t *testing.T) {
 }
 
 func TestEncodeGetPublicResponse_Success(t *testing.T) {
-	resp := GetPublicKeyResponse{publicKey: key.JWK{}}
+	resp := GetPublicKeyResponse{publicKey: key.JWK{E: "abc"}} // Capitalized field
 	w := httptest.NewRecorder()
 	err := encodeGetPublicResponse(context.Background(), w, resp)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	var m map[string]string
+	var m map[string]interface{}
 	if err := json.Unmarshal(w.Body.Bytes(), &m); err != nil {
 		t.Fatalf("invalid JSON: %v", err)
 	}
-	if m["jwks"] != "abc" {
-		t.Errorf("unexpected output: %+v", m)
+	jwks, ok := m["jwks"].(map[string]interface{})
+	if !ok {
+		t.Errorf("jwks key missing or wrong type: %+v", m)
+	}
+	if jwks["e"] != "abc" {
+		t.Errorf("unexpected jwks output: %+v", jwks)
 	}
 }
 

@@ -41,7 +41,7 @@ func TestMigrate(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
-	// --- Pre-test setup ---
+	// --- Pre-testdata setup ---
 	abs, err := os.Getwd()
 	if err != nil {
 		panic(err)

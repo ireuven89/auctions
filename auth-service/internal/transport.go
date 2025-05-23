@@ -45,8 +45,8 @@ func RegisterRoutes(router *httprouter.Router, s Service) {
 
 	loginHandler := kithttp.NewServer(
 		MakeEndpointLogin(s),
-		decodeLoginRequest,
-		encodeLoginUserResponse,
+		decodeLogoutRequest,
+		encodeLogoutUserResponse,
 	)
 
 	refreshHandler := kithttp.NewServer(
@@ -114,6 +114,33 @@ func decodeLoginRequest(ctx context.Context, r *http.Request) (interface{}, erro
 }
 
 func encodeLoginUserResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
+	res, ok := response.(LoginResponseModel)
+
+	if !ok {
+		return fmt.Errorf("encodeLoginUserResponse.failed casting response")
+	}
+
+	formatted := map[string]interface{}{
+		"token":        res.AccessToken,
+		"refreshToken": res.RefreshToken,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	return json.NewEncoder(w).Encode(&formatted)
+}
+
+func decodeLogoutRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	var req LoginRequestModel
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, fmt.Errorf("decodeLoginRequest failed parsing request %w", err)
+	}
+
+	return req, nil
+}
+
+func encodeLogoutUserResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
 	res, ok := response.(LoginResponseModel)
 
 	if !ok {

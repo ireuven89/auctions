@@ -2,9 +2,9 @@ package mocks
 
 import (
 	"context"
+	"github.com/ireuven89/auctions/auth-service/key"
 	"time"
 
-	"github.com/ireuven89/auctions/auth-service/internal"
 	"github.com/ireuven89/auctions/auth-service/user"
 )
 
@@ -14,6 +14,7 @@ type MockRepo struct {
 	FindUserFunc              func(ctx context.Context, id string) error
 	FindUserByCredentialsFunc func(ctx context.Context, identifier string) (*user.User, error)
 	GetTokenFunc              func(ctx context.Context, token string) (string, error)
+	SaveRefreshTokenFunc      func(ctx context.Context, token string, userId string, ttl time.Duration) error
 }
 
 func (m *MockRepo) FindUser(ctx context.Context, id string) (*user.User, error) {
@@ -24,8 +25,8 @@ func (m *MockRepo) FindUserByCredentials(ctx context.Context, identifier string)
 	return m.FindUserByCredentials(ctx, identifier)
 }
 
-func (m *MockRepo) SaveRefreshToken(ctx context.Context, token string, userInfo []byte, ttl time.Duration) error {
-	return m.SaveRefreshToken(ctx, token, userInfo, ttl)
+func (m *MockRepo) SaveRefreshToken(ctx context.Context, token string, userId string, ttl time.Duration) error {
+	return m.SaveRefreshTokenFunc(ctx, token, userId, ttl)
 }
 
 func (m *MockRepo) GetToken(ctx context.Context, token string) (string, error) {
@@ -38,15 +39,33 @@ func (m *MockRepo) CreateUser(ctx context.Context, u user.User) error {
 
 // MockService embeds service.Service and mocks token functions
 type MockService struct {
-	internal.Service // Embed actual service if needed
+	PubKey key.JWK
 	MockRepo
-	signTokenFunc         func(ctx context.Context, u user.User) (string, error)
-	generateRefreshTokenF func(ctx context.Context, id string) (string, error)
+	signTokenFunc        func(ctx context.Context, u user.User) (string, error)
+	generateRefreshToken func(ctx context.Context, id string) (string, error)
+	LoginFunc            func(ctx context.Context, userIdentifier, password string) (*key.Token, error)
+	RefreshTokenFunc     func(ctx context.Context, refreshToken string) (string, error)
+	GetPublicKeyFunc     func(ctx context.Context) key.JWK
+	RegisterFunc         func(ctx context.Context, user user.User) (string, string, error)
 }
 
 func (m *MockService) SignToken(ctx context.Context, u user.User) (string, error) {
 	return m.signTokenFunc(ctx, u)
 }
 func (m *MockService) GenerateRefreshToken(ctx context.Context, id string) (string, error) {
-	return m.generateRefreshTokenF(ctx, id)
+	return m.generateRefreshToken(ctx, id)
+}
+
+func (m *MockService) Login(ctx context.Context, userIdentifier, password string) (*key.Token, error) {
+	return m.LoginFunc(ctx, userIdentifier, password)
+}
+func (m *MockService) RefreshToken(ctx context.Context, refreshToken string) (string, error) {
+	return m.RefreshTokenFunc(ctx, refreshToken)
+}
+func (m *MockService) GetPublicKey(ctx context.Context) key.JWK {
+	return m.GetPublicKeyFunc(ctx)
+}
+
+func (m *MockService) Register(ctx context.Context, user user.User) (string, string, error) {
+	return m.RegisterFunc(ctx, user)
 }
