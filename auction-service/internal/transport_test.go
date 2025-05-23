@@ -90,3 +90,20 @@ func TestDeleteAuctionTransport(t *testing.T) {
 	r.ServeHTTP(resp, req)
 	assert.Equal(t, http.StatusOK, resp.Code)
 }
+
+func TestSearchAuctionTransport(t *testing.T) {
+	s := &mocks.MockAuctionService{
+		SearchFunc: func(ctx context.Context, req auction.AuctionRequest) ([]auction.Auction, error) {
+			return nil, nil
+		},
+	}
+	r := httprouter.New()
+	NewTransport(s, r)
+
+	req := httptest.NewRequest(http.MethodGet, "/auctions?name=test", bytes.NewBuffer([]byte("name: test")))
+	req = req.WithContext(context.WithValue(req.Context(), httprouter.ParamsKey, httprouter.Params{{Key: "id", Value: "456"}}))
+	resp := httptest.NewRecorder()
+
+	r.ServeHTTP(resp, req)
+	assert.Equal(t, http.StatusOK, resp.Code)
+}

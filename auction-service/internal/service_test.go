@@ -3,7 +3,6 @@ package internal
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"testing"
 
 	"github.com/google/uuid"
@@ -103,25 +102,4 @@ func TestDeleteAuction(t *testing.T) {
 
 	assert.NoError(t, err)
 	mockRepo.AssertExpectations(t)
-}
-
-func TestVal(t *testing.T) {
-	digits := []int{1, 2, 4, 9}
-	n := len(digits)
-
-	for i := n - 1; i >= 0; i-- {
-		if digits[i] < 9 {
-			digits[i]++
-			fmt.Printf("%v\n", digits)
-			break
-		}
-		digits[i] = 0
-	}
-
-	// If we reach here, it means we had all 9s like 999 → 1000
-	result := make([]int, n+1)
-	result[0] = 1
-	fmt.Printf("%v\n", result)
-
-	//	return digits
 }

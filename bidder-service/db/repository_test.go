@@ -1,10 +1,15 @@
 package db
 
 import (
+	"context"
+	"database/sql"
+	"fmt"
 	"testing"
 
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/ireuven89/auctions/bidder-service/bidder"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 )
 
 type testUpdateQuery struct {
@@ -38,5 +43,43 @@ func TestPrepareUpdateQuery(t *testing.T) {
 		assert.Equal(t, err != nil, test.WantErr)
 		assert.Equal(t, test.ExpectedQuery, q)
 		assert.Equal(t, test.ExpectedArgs, args)
+	}
+}
+
+type TestDeleteBidder struct {
+	id        string
+	wantErr   bool
+	sqlResult sql.Result
+}
+
+func TestDelete(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	logger := zap.NewNop()
+	repo := NewRepository(db, logger)
+
+	assert.NoError(t, err)
+
+	tests := []TestDeleteBidder{
+		{
+			id:        "id",
+			wantErr:   false,
+			sqlResult: sqlmock.NewResult(0, 1),
+		},
+		{
+			id:        "",
+			wantErr:   false,
+			sqlResult: sqlmock.NewResult(0, 0),
+		},
+	}
+
+	ctx := context.Background()
+
+	for _, test := range tests {
+		mock.ExpectExec("delete from bidders where id = ?").WithArgs(test.id).
+			WillReturnResult(test.sqlResult)
+		err = repo.Delete(ctx, test.id)
+		assert.Equal(t, test.wantErr, err != nil, fmt.Sprintf("want err %v but got %v error is %v", test.wantErr, err != nil, err))
+		assert.NoError(t, mock.ExpectationsWereMet(), "expectations where not met")
+
 	}
 }
