@@ -22,7 +22,7 @@ jobs:
       with:
         go-version: '1.23.9'
 
-    - name: Build auction-service
+    - name: Build bidder-service
       run: go build -v -o bidder-service ./cmd
       working-directory: bidder-service
     - name: Test
