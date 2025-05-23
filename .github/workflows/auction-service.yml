@@ -22,8 +22,8 @@ jobs:
         go-version: '1.23.9'
 
     - name: Build auction-service
-      run: go build -v
+      run: go build -v -o auction-service ./cmd
       working-directory: auctions/auction-service
-
     - name: Test
       run: go test -v ./...
+      working-directory: auctions/auction-service
