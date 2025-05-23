@@ -50,6 +50,13 @@ func RegisterRoutes(router *httprouter.Router, s Service) {
 		kithttp.ServerErrorEncoder(errorEncoder),
 	)
 
+	getAuctionsHandler := kithttp.NewServer(
+		MakeEndpointFindAuctions(s),
+		decodeGetAuctionRequest,
+		encodeGetAuctionResponse,
+		kithttp.ServerErrorEncoder(errorEncoder),
+	)
+
 	createAuctionHandler := kithttp.NewServer(
 		MakeEndpointCreateAuction(s),
 		decodeCreateAuctionRequest,
@@ -72,19 +79,46 @@ func RegisterRoutes(router *httprouter.Router, s Service) {
 	)
 
 	router.Handler(http.MethodGet, "/auctions/:id", getAuctionHandler)
+	router.Handler(http.MethodGet, "/auctions", getAuctionsHandler)
 	router.Handler(http.MethodPost, "/auctions", createAuctionHandler)
 	router.Handler(http.MethodPut, "/auctions/:id", updateAuctionHandler)
 	router.Handler(http.MethodDelete, "/auctions/:id", deleteAuctionHandler)
 }
 
 func decodeGetAuctionRequest(c context.Context, r *http.Request) (interface{}, error) {
-	id := httprouter.ParamsFromContext(c).ByName("id")
+	var req auction.AuctionRequest
+	name := r.URL.Query().Get("name")
+
+	req.Name = name
+	return GetAuctionsRequestModel{
+		AuctionRequest: req,
+	}, nil
+}
+
+func encodeGetAuctionResponse(c context.Context, w http.ResponseWriter, response interface{}) error {
+	res, ok := response.(GetAuctionsResponseModel)
+
+	if !ok {
+		return fmt.Errorf("encodeGetAuctionResponse failed parsing reponse")
+	}
+
+	var formatted []map[string]interface{}
+
+	for _, auct := range res.auctions {
+		formatted = append(formatted, formatAuction(&auct))
+	}
+
+	return json.NewEncoder(w).Encode(&formatted)
+}
+
+func decodeGetAuctionsRequest(c context.Context, r *http.Request) (interface{}, error) {
+	id := r.RequestURI
 	return GetAuctionRequestModel{
 		id: id,
 	}, nil
 }
 
-func encodeGetAuctionResponse(c context.Context, w http.ResponseWriter, response interface{}) error {
+func encodeGetAuctionsResponse(c context.Context, w http.ResponseWriter, response interface{}) error {
 	res, ok := response.(GetAuctionResponseModel)
 
 	if !ok {

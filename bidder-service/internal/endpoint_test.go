@@ -96,3 +96,29 @@ func TestMakeEndpointDeleteBidder(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Nil(t, resp)
 }
+
+func TestMakeEndpointGetBidders(t *testing.T) {
+	mockSvc := new(mockService)
+	ctx := context.Background()
+
+	request := bidder.BiddersRequest{Name: "i"}
+	mockSvc.On("SearchBidders", ctx, request).Return(
+		[]bidder.Bidder{
+			{
+				Name: "itzik",
+			},
+		}, nil)
+
+	endpoint := MakeEndpointGetBidders(mockSvc)
+
+	resp, err := endpoint(ctx, GetBiddersRequestModel{request})
+
+	assert.NoError(t, err)
+	response, ok := resp.(GetBiddersResponseModel)
+
+	if !ok {
+		assert.Fail(t, "failed casting response")
+	}
+	assert.NoError(t, err)
+	assert.NotEmpty(t, response)
+}
