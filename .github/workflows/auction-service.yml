@@ -23,7 +23,7 @@ jobs:
 
     - name: Build auction-service
       run: go build -v -o auction-service ./cmd
-      working-directory: auctions/auction-service
+      working-directory: auction-service
     - name: Test
       run: go test -v ./...
-      working-directory: auctions/auction-service
+      working-directory: auction-service
