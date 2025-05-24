@@ -24,14 +24,14 @@ func TestPrepareUpdateQuery(t *testing.T) {
 	tests := []testUpdateQuery{
 		{
 			Name:          "failed query",
-			request:       bidder.Bidder{ID: "test-id", Name: "name", Item: "item"},
+			request:       bidder.Bidder{ID: "testdata-id", Name: "name", Item: "item"},
 			ExpectedQuery: "UPDATE bidders SET name = ?, item = ? WHERE id = ?",
-			ExpectedArgs:  []interface{}{"name", "item", "test-id"},
+			ExpectedArgs:  []interface{}{"name", "item", "testdata-id"},
 			WantErr:       false,
 		},
 		{
 			Name:          "failed query",
-			request:       bidder.Bidder{ID: "test-id"},
+			request:       bidder.Bidder{ID: "testdata-id"},
 			ExpectedQuery: "",
 			ExpectedArgs:  nil,
 			WantErr:       true,

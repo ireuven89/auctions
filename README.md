@@ -4,16 +4,17 @@ This repository contains the microservices for a distributed auction platform. I
 
 - **Auction Service**: Manages creation, updates, and scheduling of auctions.
 - **Bidder Service**: Manages user registrations and bidding functionality.
-
+- **Auth Service:** Handles authentication, token issuance, and validation for users and services.
 ---
 
 ## 📦 Repository Structure
 
 auctions/
-├── auction-service/ # Handles auction logic, scheduling, and status updates
-├── bidder-service/ # Handles bidder registration, updates, and bid submissions
-├── shared/ # Shared libraries (e.g., RabbitMQ client, config, utils)
-├── docker-compose.yml # Multi-service orchestration
+├── auction-service/    # Handles auction logic, scheduling, and status updates
+├── bidder-service/     # Handles bidder registration, updates, and bid submissions
+├── auth-service/       # Handles authentication, token issuance, and validation
+├── shared/             # Shared libraries (e.g., RabbitMQ client, config, utils)
+├── docker-compose.yml  # Multi-service orchestration
 └── README.md
 
 

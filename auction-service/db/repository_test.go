@@ -26,23 +26,23 @@ func TestUpdateQuery(t *testing.T) {
 	tests := []TestUpdate{
 		{
 			Name:          "single query",
-			Request:       auction.AuctionRequest{ID: "test-id", Name: "name"},
+			Request:       auction.AuctionRequest{ID: "testdata-id", Name: "name"},
 			ExpectedQuery: "UPDATE auctions SET name = ? WHERE id = ?",
-			ExpectedArgs:  []interface{}{"name", "test-id"},
+			ExpectedArgs:  []interface{}{"name", "testdata-id"},
 			ExpectedErr:   false,
 		},
 		{
-			Name:          "test empty",
-			Request:       auction.AuctionRequest{ID: "test-id"},
+			Name:          "testdata empty",
+			Request:       auction.AuctionRequest{ID: "testdata-id"},
 			ExpectedQuery: "",
 			ExpectedArgs:  nil,
 			ExpectedErr:   true,
 		},
 		{
 			Name:          "another query",
-			Request:       auction.AuctionRequest{ID: "test-id", Name: "name"},
+			Request:       auction.AuctionRequest{ID: "testdata-id", Name: "name"},
 			ExpectedQuery: "UPDATE auctions SET name = ? WHERE id = ?",
-			ExpectedArgs:  []interface{}{"name", "test-id"},
+			ExpectedArgs:  []interface{}{"name", "testdata-id"},
 			ExpectedErr:   false,
 		},
 	}

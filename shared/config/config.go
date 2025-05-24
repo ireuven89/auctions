@@ -1,6 +1,9 @@
 package config
 
 import (
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"os"
 
@@ -9,6 +12,7 @@ import (
 
 type Config struct {
 	Sql    DBConfig     `mapstructure:"database"`
+	Redis  DBConfig     `mapstructure:"redis"`
 	Server ServerConfig `mapstructure:"server"`
 }
 
@@ -24,6 +28,7 @@ type DBConfig struct {
 }
 
 const defaultConfigDir = "/config"
+const defaultPublicKeyPath = "/config/public.key"
 
 func LoadConfig() (*Config, error) {
 	var config *Config
@@ -52,4 +57,28 @@ func LoadConfig() (*Config, error) {
 	}
 
 	return config, nil
+}
+
+func LoadRSAPublicKeyFromEnv() (*rsa.PublicKey, error) {
+	publicKeyPath := os.Getenv("JWT_PUBLIC_KEY_PATH")
+	if publicKeyPath == "" {
+		publicKeyPath = defaultPublicKeyPath
+	}
+	publicKeyPemFile, err := os.ReadFile(publicKeyPath)
+	if err != nil {
+		return nil, err
+	}
+	block, _ := pem.Decode(publicKeyPemFile)
+	if block == nil || block.Type != "PUBLIC KEY" {
+		return nil, fmt.Errorf("failed to decode PEM block containing public key")
+	}
+	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse DER encoded public key: %v", err)
+	}
+	rsaPub, ok := pub.(*rsa.PublicKey)
+	if !ok {
+		return nil, fmt.Errorf("not RSA public key")
+	}
+	return rsaPub, nil
 }

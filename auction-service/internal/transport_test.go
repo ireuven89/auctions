@@ -100,7 +100,7 @@ func TestSearchAuctionTransport(t *testing.T) {
 	r := httprouter.New()
 	NewTransport(s, r)
 
-	req := httptest.NewRequest(http.MethodGet, "/auctions?name=test", bytes.NewBuffer([]byte("name: test")))
+	req := httptest.NewRequest(http.MethodGet, "/auctions?name=testdata", bytes.NewBuffer([]byte("name: testdata")))
 	req = req.WithContext(context.WithValue(req.Context(), httprouter.ParamsKey, httprouter.Params{{Key: "id", Value: "456"}}))
 	resp := httptest.NewRecorder()
 
