@@ -1,0 +1,13 @@
+server:
+  port: 8099
+
+database:
+  port: 3306
+  host: "localhost"
+  user: "root"
+  password: "admin"
+
+redis:
+  port: 6379
+  host: "localhost:6379"
+  password: "admin"
