@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math/big"
 	"os"
+	"regexp"
 	"time"
 
 	"github.com/ireuven89/auctions/auth-service/user"
@@ -41,6 +42,7 @@ type service struct {
 }
 
 const refreshTokenTTL = 24 * 30 * time.Hour
+const refreshMaxRate = 3
 const accessTokenTTL = 15 * time.Minute
 
 func NewAuthService(logger *zap.Logger, repo db.Repository, secretName string) (Service, error) {
@@ -53,6 +55,7 @@ func NewAuthService(logger *zap.Logger, repo db.Repository, secretName string) (
 	return &service{privateKey: privateKey, publicKey: publicKey, logger: logger, repository: repo}, nil
 }
 
+// TODO this should called in NewAuthService  when secret key is done
 func loadPrivateKeyFromSecretsManager(secretName string) (*rsa.PrivateKey, error) {
 	ctx := context.Background()
 	cfg, err := config.LoadDefaultConfig(ctx)
@@ -81,6 +84,7 @@ func loadPrivateKeyFromSecretsManager(secretName string) (*rsa.PrivateKey, error
 	return privateKey, nil
 }
 
+// TODO this should be removed when secret key is done
 func loadPrivateKeyFromLocal() (*rsa.PrivateKey, error) {
 	privateKeyPath := os.Getenv("JWT_PRIVATE_KEY_PATH")
 
@@ -102,6 +106,7 @@ func loadPrivateKeyFromLocal() (*rsa.PrivateKey, error) {
 	return privateKey, nil
 }
 
+// TODO this should be removed when secret key is done
 func loadPublicKeyFromLocal() (*rsa.PublicKey, error) {
 	publicKeyPath := os.Getenv("JWT_PUBLIC_KEY_PATH")
 
@@ -123,6 +128,7 @@ func loadPublicKeyFromLocal() (*rsa.PublicKey, error) {
 	return publicKey, nil
 }
 
+// TODO this should called in NewAuthService when secret key is done
 func loadPublicKeyFromSecretsManager(secretName string) (*rsa.PublicKey, error) {
 	ctx := context.Background()
 	cfg, err := config.LoadDefaultConfig(ctx)
@@ -176,13 +182,17 @@ func (s *service) GetPublicKey(ctx context.Context) key.JWK {
 }
 
 func (s *service) Register(ctx context.Context, userCredentials user.User) (string, string, error) {
-	userID := generateID()
+	if ok := validateEmail(userCredentials.Email); !ok {
+		return "", "", fmt.Errorf("invalid email pattern")
+	}
 
 	hashedPassword, err := hashPassword(userCredentials.Password)
 
 	if err != nil {
 		return "", "", fmt.Errorf("service.Register %w", err)
 	}
+
+	userID := generateID()
 
 	userCredentials.ID = userID
 	userCredentials.Password = hashedPassword
@@ -204,11 +214,29 @@ func (s *service) Register(ctx context.Context, userCredentials user.User) (stri
 	return token, refreshToken, nil
 }
 
+func validateEmail(email string) bool {
+	matched, err := regexp.MatchString("^[A-Za-z0-9]+@[a-zA-Z0-9]+\\.[a-z]{2,}$", email)
+
+	if err != nil {
+		return false
+	}
+
+	return matched
+}
+
 func (s *service) RefreshToken(ctx context.Context, refreshToken string) (string, error) {
+	if ok := s.IsRefreshAllowed(ctx, refreshToken); !ok {
+		return "", key.ErrTooManyRequests
+	}
+
 	userId, err := s.repository.GetToken(ctx, "refresh:"+refreshToken)
 	if err != nil {
-		s.logger.Error("service.RefreshToken", zap.Error(err), zap.String("token", refreshToken))
-		return "", key.ErrExpiredToken
+		if errors.Is(err, key.ErrExpiredToken) {
+			s.logger.Error("service.RefreshToken", zap.Error(err), zap.String("token", refreshToken))
+			return "", key.ErrExpiredToken
+		}
+
+		return "", fmt.Errorf("service.RefreshToken %w", err)
 	}
 
 	user, err := s.repository.FindUser(ctx, userId)
@@ -226,6 +254,21 @@ func (s *service) RefreshToken(ctx context.Context, refreshToken string) (string
 	}
 
 	return accessToken, nil
+}
+
+func (s *service) IsRefreshAllowed(ctx context.Context, refreshToken string) bool {
+	rate, err := s.repository.GetRefreshRate(ctx, refreshToken)
+
+	if err != nil {
+		s.logger.Error("service.IsRefreshAllowed", zap.Error(err))
+		return false
+	}
+
+	if rate > refreshMaxRate {
+		return false
+	}
+
+	return true
 }
 
 func (s *service) GenerateAccessToken(ctx context.Context, userId string) (string, error) {

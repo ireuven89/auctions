@@ -1,12 +1,13 @@
 package internal
 
 import (
-	"github.com/ireuven89/auctions/auth-service/internal/mocks"
-	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/ireuven89/auctions/auth-service/internal/mocks"
+	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 )
 
 func setupTestKeys(t *testing.T) (privPath, pubPath string) {
@@ -101,3 +102,36 @@ func TestService_RefreshToken_TokenNotFound(t *testing.T) {
 	_, err = svc.RefreshToken(context.Background(), "badtoken")
 	assert.Error(t, err)
 }*/
+
+type EmailTest struct {
+	pattern string
+	valid   bool
+}
+
+func TestRegex(t *testing.T) {
+	testEmails := []EmailTest{
+		{
+			valid:   true,
+			pattern: "test@example.com",
+		}, {
+			valid:   false,
+			pattern: "invalid-email.com",
+		},
+		{
+			valid:   true,
+			pattern: "user@domain.org",
+		},
+		{
+			valid:   false,
+			pattern: "another@domain",
+		},
+		{
+			valid:   true,
+			pattern: "foo@bar.baz",
+		},
+	}
+
+	for _, test := range testEmails {
+		assert.Equal(t, test.valid, validateEmail(test.pattern))
+	}
+}

@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/ireuven89/auctions/auth-service/key"
-	user2 "github.com/ireuven89/auctions/auth-service/user"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/ireuven89/auctions/auth-service/key"
+	user2 "github.com/ireuven89/auctions/auth-service/user"
 )
 
 func TestDecodeRegisterUserRequest_Success(t *testing.T) {

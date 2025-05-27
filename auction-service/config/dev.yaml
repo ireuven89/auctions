@@ -6,7 +6,7 @@ database:
 
 server:
   port: "8090"
-
+  secret: "auth_public_key"
 
 redis:
   port: 6379

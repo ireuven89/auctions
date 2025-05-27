@@ -1,7 +1,8 @@
-package db
+package repository
 
 import (
-	"github.com/ireuven89/auctions/auction-service/auction"
+	"github.com/ireuven89/auctions/auction-service/domain"
+	"github.com/ireuven89/auctions/auction-service/internal/service"
 
 	"context"
 	"database/sql"
@@ -14,27 +15,28 @@ import (
 )
 
 type AuctionDB struct {
-	ID       string `db:"id"`
-	Name     string `db:"name"`
-	BidderId string `db:"bidder_id"`
+	ID           string    `db:"id"`
+	Description  string    `db:"description"`
+	Regions      []byte    `db:"regions"`
+	InitialOffer float64   `db:"initial_offer"`
+	CurrentBid   float64   `db:"current_highest"`
+	Status       string    `db:"status"`
+	CreatedAt    time.Time `db:"created_at"`
+	UpdatedAt    time.Time `db:"updated_at"`
 }
 
-func toAuction(db AuctionDB) auction.Auction {
+func toAuction(db AuctionDB) domain.Auction {
 
-	return auction.Auction{
-		ID:       db.ID,
-		Name:     db.Name,
-		BidderId: db.BidderId,
+	return domain.Auction{
+		ID:           db.ID,
+		Description:  db.Description,
+		Regions:      db.Regions,
+		InitialOffer: db.InitialOffer,
+		CurrentBid:   db.CurrentBid,
+		Status:       domain.FromString(db.Status),
+		CreatedAt:    db.CreatedAt,
+		UpdatedAt:    db.UpdatedAt,
 	}
-}
-
-type Repository interface {
-	Find(ctx context.Context, id string) (auction.Auction, error)
-	FindAll(ctx context.Context, request auction.AuctionRequest) ([]auction.Auction, error)
-	Update(ctx context.Context, auction auction.AuctionRequest) error
-	Create(ctx context.Context, auction auction.AuctionRequest) error
-	Delete(ctx context.Context, id string) error
-	DeleteMany(ctx context.Context, ids []interface{}) error
 }
 
 type AuctionRepository struct {
@@ -42,7 +44,7 @@ type AuctionRepository struct {
 	db     *sql.DB
 }
 
-func NewRepository(db *sql.DB, logger *zap.Logger) Repository {
+func NewAuctionRepo(db *sql.DB, logger *zap.Logger) service.Repository {
 
 	return &AuctionRepository{
 		logger: logger,
@@ -50,11 +52,11 @@ func NewRepository(db *sql.DB, logger *zap.Logger) Repository {
 	}
 }
 
-func (r *AuctionRepository) Find(ctx context.Context, id string) (auction.Auction, error) {
+func (r *AuctionRepository) Find(ctx context.Context, id string) (domain.Auction, error) {
 	var result AuctionDB
 	start := time.Now()
 
-	q := "select id, name from auctions where id = ?"
+	q := "select id, description from auctions where id = ?"
 
 	r.logger.Debug("AuctionRepository.Find ", zap.Any("query", q), zap.Any("args", id))
 
@@ -66,21 +68,21 @@ func (r *AuctionRepository) Find(ctx context.Context, id string) (auction.Auctio
 
 	if row.Err() != nil {
 		r.logger.Error("AuctionRepository.Find failed fetching result ", zap.Error(row.Err()), zap.String("id", id))
-		return auction.Auction{}, row.Err()
+		return domain.Auction{}, row.Err()
 	}
 
-	if err := row.Scan(&result.ID, &result.Name); err != nil {
+	if err := row.Scan(&result.ID, &result.Description); err != nil {
 		r.logger.Error("failed getting db result", zap.Error(err))
-		return auction.Auction{}, err
+		return domain.Auction{}, err
 	}
 
 	return toAuction(result), nil
 }
 
-func (r *AuctionRepository) FindAll(ctx context.Context, request auction.AuctionRequest) ([]auction.Auction, error) {
-	var result []auction.Auction
+func (r *AuctionRepository) FindAll(ctx context.Context, request domain.AuctionRequest) ([]domain.Auction, error) {
+	var result []domain.Auction
 	whereParams := prepareSearchQuery(request)
-	q := fmt.Sprintf("SELECT id, name, bidder_id from auctions where %s", whereParams)
+	q := fmt.Sprintf("SELECT id, description, regions, status, initalOffer, created_at, updatead_at from auctions where %s", whereParams)
 
 	r.logger.Debug("AuctionRepository.FindAll", zap.String("query", q))
 
@@ -93,7 +95,7 @@ func (r *AuctionRepository) FindAll(ctx context.Context, request auction.Auction
 
 	for rows.Next() {
 		var auctionDB AuctionDB
-		if err = rows.Scan(&auctionDB.ID, &auctionDB.Name, &auctionDB.BidderId); err != nil {
+		if err = rows.Scan(&auctionDB.ID, &auctionDB.Description, &auctionDB.Regions, &auctionDB.Status, &auctionDB.InitialOffer, &auctionDB.CreatedAt, &auctionDB.UpdatedAt); err != nil {
 			r.logger.Error("FindAll failed to cast results", zap.Error(err))
 			return nil, fmt.Errorf("AuctionRepository.FindAll %w", err)
 		}
@@ -103,17 +105,17 @@ func (r *AuctionRepository) FindAll(ctx context.Context, request auction.Auction
 	return result, nil
 }
 
-func prepareSearchQuery(request auction.AuctionRequest) string {
+func prepareSearchQuery(request domain.AuctionRequest) string {
 	var where strings.Builder
 
-	if request.Name != "" {
-		where.WriteString(fmt.Sprintf("name LIKE '%%%s%%'", request.Name))
+	if request.Description != "" {
+		where.WriteString(fmt.Sprintf("description LIKE '%%%s%%'", request.Description))
 	}
 
 	return where.String()
 }
 
-func (r *AuctionRepository) Update(ctx context.Context, auction auction.AuctionRequest) error {
+func (r *AuctionRepository) Update(ctx context.Context, auction domain.AuctionRequest) error {
 	q, args, err := buildUpdateQuery(auction)
 
 	r.logger.Debug("AuctionRepository.Update", zap.String("query", q), zap.Any("args", args))
@@ -133,14 +135,22 @@ func (r *AuctionRepository) Update(ctx context.Context, auction auction.AuctionR
 	return nil
 }
 
-func buildUpdateQuery(auction auction.AuctionRequest) (string, []interface{}, error) {
+func buildUpdateQuery(auction domain.AuctionRequest) (string, []interface{}, error) {
 	query := "UPDATE auctions SET "
 	var sets []string
 	var args []interface{}
 
-	if auction.Name != "" {
-		sets = append(sets, "name = ?")
-		args = append(args, auction.Name)
+	if auction.Description != "" {
+		sets = append(sets, "description = ?")
+		args = append(args, auction.Description)
+	}
+
+	if len(auction.Regions) != 0 {
+		args = append(args, auction.Regions)
+	}
+
+	if auction.Status != "" {
+		args = append(args, auction.Status)
 	}
 
 	if len(sets) == 0 {
@@ -153,12 +163,12 @@ func buildUpdateQuery(auction auction.AuctionRequest) (string, []interface{}, er
 	return query, args, nil
 }
 
-func (r *AuctionRepository) Create(ctx context.Context, auction auction.AuctionRequest) error {
-	q := "insert into auctions (id, name, bidder_id) values(?, ?, ?)"
+func (r *AuctionRepository) Create(ctx context.Context, auction domain.AuctionRequest) error {
+	q := "insert into auctions (id, description, seller_id, regions, status, initial_offer, created_at, updated_at) values(?, ?, ?, ?, ?, ?, ?, ?)"
 
 	r.logger.Debug("AuctionRepository.Create", zap.String("query", q), zap.Any("args", auction))
 
-	_, err := r.db.ExecContext(ctx, q, auction.ID, auction.Name)
+	_, err := r.db.ExecContext(ctx, q, auction.ID, auction.Description, auction.SellerId, auction.Regions, auction.Status, auction.InitialOffer, auction.CreatedAt, auction.UpdatedAt)
 
 	if err != nil {
 		r.logger.Error("AuctionRepository.Create failed to insert ", zap.Error(err))
