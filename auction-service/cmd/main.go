@@ -3,6 +3,9 @@ package main
 import (
 	"fmt"
 
+	"github.com/ireuven89/auctions/auction-service/internal/repository"
+	"github.com/ireuven89/auctions/auction-service/internal/service"
+
 	"github.com/ireuven89/auctions/auction-service/db"
 	"github.com/ireuven89/auctions/auction-service/internal"
 	"github.com/ireuven89/auctions/shared/config"
@@ -29,9 +32,10 @@ func main() {
 	}
 
 	router := httprouter.New()
-	repo := db.NewRepository(dbConn, logger)
-	itemRepo := db.NewItemRepo(logger, dbConn)
-	service := internal.NewService(repo, itemRepo, logger)
+	repo := repository.NewAuctionRepo(dbConn, logger)
+	itemRepo := repository.NewItemRepo(dbConn, logger)
+	service := service.NewService(repo, itemRepo, logger)
+
 	transport := internal.NewTransport(service, router)
 
 	transport.ListenAndServe(cfg.Server.Port, publicKey)

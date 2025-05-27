@@ -2,7 +2,10 @@ package mocks
 
 import (
 	"context"
+<<<<<<< HEAD
 	"github.com/ireuven89/auctions/shared/jwksprovider"
+=======
+>>>>>>> c0db1a1 (added items and bids logic)
 	"time"
 
 	"github.com/ireuven89/auctions/auth-service/key"
@@ -17,7 +20,15 @@ type MockRepo struct {
 	FindUserByCredentialsFunc func(ctx context.Context, identifier string) (*user.User, error)
 	GetTokenFunc              func(ctx context.Context, token string) (string, error)
 	SaveRefreshTokenFunc      func(ctx context.Context, token string, userId string, ttl time.Duration) error
+<<<<<<< HEAD
 	DeleteUserFunc            func(ctx context.Context, id string) error
+=======
+	GetRefreshRateFunc        func(ctx context.Context, token string) (int, error)
+}
+
+func (m *MockRepo) GetRefreshRate(ctx context.Context, token string) (int, error) {
+	return m.GetRefreshRateFunc(ctx, token)
+>>>>>>> c0db1a1 (added items and bids logic)
 }
 
 func (m *MockRepo) FindUser(ctx context.Context, id string) (*user.User, error) {

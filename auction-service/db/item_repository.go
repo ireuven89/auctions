@@ -27,19 +27,17 @@ type ItemWithPictureDB struct {
 func toItem(db ItemDB) domain.Item {
 
 	return domain.Item{
-		ID:        db.ID,
-		Name:      db.Name,
-		AuctionID: db.AuctionID,
+		ID:          db.ID,
+		Description: db.Name,
+		AuctionID:   db.AuctionID,
 	}
 }
 
 func toItemPicture(db ItemWithPictureDB) domain.ItemPicture {
 
 	return domain.ItemPicture{
-		ItemID:       db.ItemID,
-		Name:         db.Name,
-		AuctionID:    db.AuctionID,
-		DownloadLink: db.DownloadLink,
+		ItemID:      db.ItemID,
+		DownloadUrl: db.DownloadLink,
 	}
 }
 

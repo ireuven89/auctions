@@ -9,14 +9,16 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/ireuven89/auctions/auction-service/domain"
+	"github.com/ireuven89/auctions/auction-service/internal/service"
+
 	kithttp "github.com/go-kit/kit/transport/http"
-	"github.com/ireuven89/auctions/auction-service/auction"
+
 	http2 "github.com/ireuven89/auctions/shared/http"
 	"github.com/julienschmidt/httprouter"
 )
 
-func NewTransport(s Service, router *httprouter.Router) Transport {
-
+func NewTransport(s service.Service, router *httprouter.Router) Transport {
 	transport := Transport{
 		router: router,
 		s:      s,
@@ -27,7 +29,7 @@ func NewTransport(s Service, router *httprouter.Router) Transport {
 
 type Transport struct {
 	router *httprouter.Router
-	s      Service
+	s      service.Service
 }
 
 func (t *Transport) ListenAndServe(port string, publicKey *rsa.PublicKey) {
@@ -40,7 +42,7 @@ func (t *Transport) ListenAndServe(port string, publicKey *rsa.PublicKey) {
 	}
 }
 
-func RegisterRoutes(router *httprouter.Router, s Service) {
+func RegisterRoutes(router *httprouter.Router, s service.Service) {
 
 	getAuctionHandler := kithttp.NewServer(
 		MakeEndpointGetAuction(s),
@@ -77,9 +79,16 @@ func RegisterRoutes(router *httprouter.Router, s Service) {
 		kithttp.ServerErrorEncoder(errorEncoder),
 	)
 
-	deleteAuctionsHandler := kithttp.NewServer(
-		MakeEndpointDeleteAuctions(s),
-		decodeDeleteAuctionsRequest,
+	auctionItemsHandler := kithttp.NewServer(
+		MakeEndpointCreateAuctionItems(s),
+		decodeCreateItemRequest,
+		kithttp.EncodeJSONResponse,
+		kithttp.ServerErrorEncoder(errorEncoder),
+	)
+
+	AuctionItemsPicturesHandler := kithttp.NewServer(
+		MakeEndpointCreateAuctionItemPictures(s),
+		decodeCreateItemPicturesRequest,
 		kithttp.EncodeJSONResponse,
 		kithttp.ServerErrorEncoder(errorEncoder),
 	)
@@ -89,7 +98,9 @@ func RegisterRoutes(router *httprouter.Router, s Service) {
 	router.Handler(http.MethodPost, "/auctions", createAuctionHandler)
 	router.Handler(http.MethodPut, "/auctions/:id", updateAuctionHandler)
 	router.Handler(http.MethodDelete, "/auctions/:id", deleteAuctionHandler)
-	router.Handler(http.MethodDelete, "/auctions", deleteAuctionsHandler)
+	router.Handler(http.MethodPost, "/auctions/:id/items", auctionItemsHandler)
+	router.Handler(http.MethodPost, "/auctions/:id/items/:itemId/pictures", AuctionItemsPicturesHandler)
+
 }
 
 func decodeGetAuctionRequest(c context.Context, r *http.Request) (interface{}, error) {
@@ -116,8 +127,8 @@ func decodeGetAuctionsRequest(c context.Context, r *http.Request) (interface{}, 
 	name := r.URL.Query().Get("name")
 
 	return GetAuctionsRequestModel{
-		AuctionRequest: auction.AuctionRequest{
-			Name: name,
+		AuctionRequest: domain.AuctionRequest{
+			Description: name,
 		},
 	}, nil
 }
@@ -143,10 +154,36 @@ func decodeCreateAuctionRequest(c context.Context, r *http.Request) (interface{}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		fmt.Printf("decodeCreateAuctionRequest failed decoding request %v", err)
-		return nil, fmt.Errorf("decodeCreateAuctionRequest failed casting request")
+		return nil, fmt.Errorf("decodeCreateAuctionRequest failed casting request %w", err)
 	}
 
 	return req, nil
+}
+
+func decodeCreateItemRequest(c context.Context, r *http.Request) (interface{}, error) {
+	var items []domain.Item
+	json.NewDecoder(r.Body)
+	return AuctionItemsRequestModel{
+		AuctionID: r.PathValue("id"),
+		items:     items,
+	}, nil
+}
+
+func decodeCreateItemPicturesRequest(c context.Context, r *http.Request) (interface{}, error) {
+
+	if err := r.ParseMultipartForm(20 << 20); err != nil {
+		return nil, fmt.Errorf("decodeCreateItemPicturesRequest %w", err)
+	}
+
+	files := r.MultipartForm.File["images"]
+
+	if len(files) > 5 {
+		return nil, fmt.Errorf("decodeCreateAuctionRequest images upload is restircted to 5 images")
+	}
+
+	return AuctionPicturesRequestModel{
+		Files: files,
+	}, nil
 }
 
 func encodeCreateAuctionResponse(c context.Context, w http.ResponseWriter, response interface{}) error {
@@ -185,25 +222,18 @@ func decodeDeleteAuctionRequest(c context.Context, r *http.Request) (interface{}
 	return req, nil
 }
 
-func decodeDeleteAuctionsRequest(c context.Context, r *http.Request) (interface{}, error) {
-	var ids []string
-
-	if err := json.NewDecoder(r.Body).Decode(&ids); err != nil {
-		fmt.Printf("decodeDeleteAuctionsRequest failed decoding request %v", err)
-		return nil, fmt.Errorf("decodeDeleteAuctionsRequest %w", err)
-	}
-
-	return DeleteAuctionsRequestModel{
-		ids: ids,
-	}, nil
-}
-
 func errorEncoder(_ context.Context, err error, w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json")
 
 	switch {
-	case errors.Is(err, auction.ErrNotFound):
+	case errors.Is(err, domain.ErrNotFound):
 		w.WriteHeader(http.StatusNotFound)
+	case errors.Is(err, domain.ErrTooManyRequests):
+		w.WriteHeader(http.StatusTooManyRequests)
+	case errors.Is(err, domain.ErrUnAuthorized):
+		w.WriteHeader(http.StatusUnauthorized)
+	case errors.Is(err, domain.ErrBadRequest):
+		w.WriteHeader(http.StatusBadRequest)
 	default:
 		w.WriteHeader(http.StatusInternalServerError)
 	}

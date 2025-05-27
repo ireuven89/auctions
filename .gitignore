@@ -1,4 +1,5 @@
-
+#cmd files
+*.exe
 #vendor folders
 bidder-service/vendor
 

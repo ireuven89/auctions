@@ -6,17 +6,18 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/ireuven89/auctions/auction-service/auction"
+	"github.com/ireuven89/auctions/auction-service/domain"
+
 	"github.com/ireuven89/auctions/auction-service/internal/mocks"
 )
 
 func TestMakeEndpointGetAuction(t *testing.T) {
 	mockService := &mocks.MockAuctionService{
-		FetchFunc: func(ctx context.Context, id string) (*auction.Auction, error) {
+		FetchFunc: func(ctx context.Context, id string) (*domain.Auction, error) {
 			if id == "123" {
-				return &auction.Auction{ID: "123", Name: "Test Auction"}, nil
+				return &domain.Auction{ID: "123", Description: "Test Auction"}, nil
 			}
-			return &auction.Auction{}, fmt.Errorf("not found")
+			return &domain.Auction{}, fmt.Errorf("not found")
 		},
 	}
 
@@ -48,7 +49,7 @@ func TestMakeEndpointGetAuction(t *testing.T) {
 
 func TestMakeEndpointUpdateAuction(t *testing.T) {
 	mockService := &mocks.MockAuctionService{
-		UpdateFunc: func(ctx context.Context, a auction.AuctionRequest) error {
+		UpdateFunc: func(ctx context.Context, a domain.AuctionRequest) error {
 			if a.ID == "" {
 				return errors.New("missing ID")
 			}
@@ -60,7 +61,7 @@ func TestMakeEndpointUpdateAuction(t *testing.T) {
 
 	// Test success case
 	req := UpdateAuctionRequestModel{
-		AuctionRequest: auction.AuctionRequest{ID: "123", Name: "Updated Auction"},
+		AuctionRequest: domain.AuctionRequest{ID: "123", Description: "Updated Auction"},
 	}
 	resp, err := endpoint(context.Background(), req)
 	if err != nil {
@@ -72,7 +73,7 @@ func TestMakeEndpointUpdateAuction(t *testing.T) {
 
 	// Test failure case
 	req = UpdateAuctionRequestModel{
-		AuctionRequest: auction.AuctionRequest{ID: "", Name: "Invalid"},
+		AuctionRequest: domain.AuctionRequest{ID: "", Description: "Invalid"},
 	}
 	_, err = endpoint(context.Background(), req)
 	if err == nil {
@@ -82,7 +83,7 @@ func TestMakeEndpointUpdateAuction(t *testing.T) {
 
 func TestMakeEndpointCreateAuction(t *testing.T) {
 	mockService := &mocks.MockAuctionService{
-		CreateFunc: func(ctx context.Context, a auction.AuctionRequest) (string, error) {
+		CreateFunc: func(ctx context.Context, a domain.AuctionRequest) (string, error) {
 			if a.ID == "" {
 				return "", errors.New("missing ID")
 			}
@@ -94,7 +95,7 @@ func TestMakeEndpointCreateAuction(t *testing.T) {
 
 	// Test success case
 	req := CreateAuctionRequestModel{
-		AuctionRequest: auction.AuctionRequest{ID: "123", Name: "Updated Auction"},
+		AuctionRequest: domain.AuctionRequest{ID: "123", Description: "Updated Auction"},
 	}
 	resp, err := endpoint(context.Background(), req)
 	if err != nil {
@@ -108,7 +109,7 @@ func TestMakeEndpointCreateAuction(t *testing.T) {
 
 	// Test failure case
 	req = CreateAuctionRequestModel{
-		AuctionRequest: auction.AuctionRequest{ID: "", Name: "Invalid"},
+		AuctionRequest: domain.AuctionRequest{ID: "", Description: "Invalid"},
 	}
 	_, err = endpoint(context.Background(), req)
 	if err == nil {

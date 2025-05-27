@@ -29,7 +29,11 @@ type DBConfig struct {
 }
 
 type AWSConfig struct {
-	KMSKeyID string `mapstructure:"kms_key_id"`
+	KMSKeyID  string `mapstructure:"kms_key_id"`
+	S3Buckets struct {
+		Primary string `mapstructure:"primary"`
+	} `mapstructure:"s3_buckets"`
+	S3Region string
 }
 
 const defaultConfigDir = "/config"

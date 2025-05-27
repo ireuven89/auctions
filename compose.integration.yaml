@@ -1,0 +1,135 @@
+version: '3.8'
+
+services:
+  auction-test:
+    build:
+      context: ./auction-service
+      dockerfile: Dockerfile
+    container_name: auction-integration-test
+    environment:
+      - ENV=test
+      - CONFIG_PATH=/config
+      - APP_ENV=test
+      - MIGRATIONS_DIR=/migrations
+      - DB_HOST=auction-db
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASS=testpassword
+      - DB_NAME=auction_test
+    depends_on:
+      auction-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: ["go", "test", "-v", "./..."]
+    networks:
+      - testnet
+  auth-test:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    container_name: auth-service
+    depends_on:
+      auth-db:
+        condition: service_healthy
+      auth-redis:
+        condition: service_healthy
+    networks:
+      - testnet
+    environment:
+      - ENV=${APP_ENV}
+      - CONFIG=/config
+      - MIGRATIONS_DIR=${MIGRATIONS_DIR}
+  auth-redis:
+    image: redis:latest
+    container_name: redis-server
+    environment:
+      - REDIS_PASSWORD=admin
+    ports:
+      - "6379:6379"
+    networks:
+      - testnet
+  auth-db:
+    image: mysql:latest
+    container_name: auth-db
+    environment:
+      - MYSQL_ROOT_PASSWORD=admin
+    healthcheck:
+      start_period: 10s
+      timeout: 1m
+      interval: 10s
+      test: [ "CMD", "mysqladmin" ,"ping", "-h", "localhost" ]
+    ports:
+      - "3309:3306"
+    networks:
+      - testnet
+
+  bidder-test:
+    build:
+      context: bidder-service
+      dockerfile: Dockerfile
+    container_name: bidder-integration-test
+    environment:
+      - ENV=test
+      - CONFIG_PATH=/config
+      - APP_ENV=test
+      - MIGRATIONS_DIR=/migrations
+      - DB_HOST=bidder-db
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASS=testpassword
+      - DB_NAME=bidder_test
+    depends_on:
+      bidder-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: ["go", "test", "-v", "./..."]
+    networks:
+      - testnet
+
+  auction-db:
+    image: mysql:latest
+    environment:
+      - MYSQL_ROOT_PASSWORD=testpassword
+      - MYSQL_DATABASE=auction_test
+    ports:
+      - "13307:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+    networks:
+      - testnet
+
+  bidder-db:
+    image: mysql:latest
+    environment:
+      - MYSQL_ROOT_PASSWORD=testpassword
+      - MYSQL_DATABASE=bidder_test
+    ports:
+      - "13308:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+    networks:
+      - testnet
+
+  redis:
+    image: redis:latest
+    ports:
+      - "16379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+    networks:
+      - testnet
+
+networks:
+  testnet:
+    driver: bridge

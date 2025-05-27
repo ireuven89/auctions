@@ -8,15 +8,14 @@ import (
 	"github.com/ireuven89/auctions/auction-service/domain"
 
 	"github.com/google/uuid"
-	"github.com/ireuven89/auctions/auction-service/auction"
 	"go.uber.org/zap"
 )
 
 type Service interface {
-	Fetch(ctx context.Context, id string) (*auction.Auction, error)
-	Search(ctx context.Context, request auction.AuctionRequest) ([]auction.Auction, error)
-	Update(ctx context.Context, auction auction.AuctionRequest) error
-	Create(ctx context.Context, auction auction.AuctionRequest) (string, error)
+	Fetch(ctx context.Context, id string) (*domain.Auction, error)
+	Search(ctx context.Context, request domain.AuctionRequest) ([]domain.Auction, error)
+	Update(ctx context.Context, auction domain.AuctionRequest) error
+	Create(ctx context.Context, auction domain.AuctionRequest) (string, error)
 	Delete(ctx context.Context, id string) error
 	DeleteMany(ctx context.Context, ids []string) error
 }
@@ -28,10 +27,10 @@ type ItemRepository interface {
 }
 
 type Repository interface {
-	Find(ctx context.Context, id string) (auction.Auction, error)
-	FindAll(ctx context.Context, request auction.AuctionRequest) ([]auction.Auction, error)
-	Update(ctx context.Context, auction auction.AuctionRequest) error
-	Create(ctx context.Context, auction auction.AuctionRequest) error
+	Find(ctx context.Context, id string) (domain.Auction, error)
+	FindAll(ctx context.Context, request domain.AuctionRequest) ([]domain.Auction, error)
+	Update(ctx context.Context, auction domain.AuctionRequest) error
+	Create(ctx context.Context, auction domain.AuctionRequest) error
 	Delete(ctx context.Context, id string) error
 	DeleteMany(ctx context.Context, ids []interface{}) error
 }
@@ -51,13 +50,13 @@ func NewService(repo Repository, itemRepo ItemRepository, logger *zap.Logger) Se
 	}
 }
 
-func (s *AuctionService) Fetch(ctx context.Context, id string) (*auction.Auction, error) {
+func (s *AuctionService) Fetch(ctx context.Context, id string) (*domain.Auction, error) {
 	res, err := s.repo.Find(ctx, id)
 
 	if err != nil {
 		s.logger.Error("AuctionService failed to fetch auction", zap.Error(err))
 		if err == sql.ErrNoRows {
-			return nil, auction.ErrNotFound
+			return nil, domain.ErrNotFound
 		}
 		return nil, fmt.Errorf("AuctionService.Fetch failed fetching bidder %w", err)
 	}
@@ -65,7 +64,7 @@ func (s *AuctionService) Fetch(ctx context.Context, id string) (*auction.Auction
 	return &res, nil
 }
 
-func (s *AuctionService) Search(ctx context.Context, request auction.AuctionRequest) ([]auction.Auction, error) {
+func (s *AuctionService) Search(ctx context.Context, request domain.AuctionRequest) ([]domain.Auction, error) {
 
 	res, err := s.repo.FindAll(ctx, request)
 
@@ -77,7 +76,7 @@ func (s *AuctionService) Search(ctx context.Context, request auction.AuctionRequ
 	return res, nil
 }
 
-func (s *AuctionService) Update(ctx context.Context, auction auction.AuctionRequest) error {
+func (s *AuctionService) Update(ctx context.Context, auction domain.AuctionRequest) error {
 
 	if err := s.repo.Update(ctx, auction); err != nil {
 		s.logger.Error("AuctionService failed to update auction", zap.Error(err))
@@ -87,7 +86,7 @@ func (s *AuctionService) Update(ctx context.Context, auction auction.AuctionRequ
 	return nil
 }
 
-func (s *AuctionService) Create(ctx context.Context, auction auction.AuctionRequest) (string, error) {
+func (s *AuctionService) Create(ctx context.Context, auction domain.AuctionRequest) (string, error) {
 	auction.ID = generateID()
 
 	if err := s.repo.Create(ctx, auction); err != nil {
