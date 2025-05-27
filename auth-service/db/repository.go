@@ -32,12 +32,18 @@ func toUser(userDB UserDB) *user.User {
 	}
 }
 
+var refresh = "refresh:%s"
+var refreshRate = "refresh:rate:%s"
+var MaxRefreshRate = 3
+var refreshRateTtl = 15 * time.Minute
+
 type Repository interface {
 	CreateUser(ctx context.Context, user user.User) error
 	FindUser(ctx context.Context, id string) (*user.User, error)
 	FindUserByCredentials(ctx context.Context, identifier string) (*user.User, error)
 	SaveRefreshToken(ctx context.Context, token string, userInfo string, ttl time.Duration) error
 	GetToken(ctx context.Context, token string) (string, error)
+	GetRefreshRate(ctx context.Context, token string) (int, error)
 }
 
 type UserRepo struct {
@@ -84,7 +90,9 @@ func (r *UserRepo) FindUser(ctx context.Context, id string) (*user.User, error) 
 }
 
 func (r *UserRepo) SaveRefreshToken(ctx context.Context, token string, userInfo string, ttl time.Duration) error {
-	statusCmd := r.redis.Set(ctx, token, userInfo, ttl)
+
+	//set refresh
+	statusCmd := r.redis.HSet(ctx, fmt.Sprintf(refresh, token), userInfo, ttl, fmt.Sprintf(refreshRate, token), MaxRefreshRate, ttl)
 
 	if statusCmd.Err() != nil {
 		return fmt.Errorf("failed inserting to redis %w", statusCmd.Err())
@@ -99,7 +107,7 @@ func (r *UserRepo) SaveRefreshToken(ctx context.Context, token string, userInfo 
 }
 
 func (r *UserRepo) GetToken(ctx context.Context, token string) (string, error) {
-	val, err := r.redis.Get(ctx, token).Result()
+	val, err := r.redis.Get(ctx, fmt.Sprintf(refresh, token)).Result()
 
 	if err != nil {
 		if err == redis.Nil {
@@ -107,6 +115,30 @@ func (r *UserRepo) GetToken(ctx context.Context, token string) (string, error) {
 		}
 
 		return "", fmt.Errorf("UserRepo.GetToken")
+	}
+
+	refreshRateVal, err := r.redis.Get(ctx, fmt.Sprintf(refreshRate, token)).Int()
+
+	if err != nil {
+		return "", fmt.Errorf("UserRepo.GetToken failed setting refresh rate %w", err)
+	}
+
+	if err = r.redis.Set(ctx, fmt.Sprintf(refreshRate, token), refreshRateVal-1, refreshRateTtl).Err(); err != nil {
+		return "", fmt.Errorf("UserRepo.GetToken failed setting refresh rate %w", err)
+	}
+
+	return val, nil
+}
+
+func (r *UserRepo) GetRefreshRate(ctx context.Context, token string) (int, error) {
+	val, err := r.redis.Get(ctx, fmt.Sprintf(refreshRate, token)).Int()
+
+	if err != nil {
+		if err == redis.Nil {
+			return -1, key.ErrExpiredToken
+		}
+
+		return -1, fmt.Errorf("UserRepo.GetRefreshRate %w", err)
 	}
 
 	return val, nil

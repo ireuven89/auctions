@@ -3,9 +3,12 @@ package internal
 import (
 	"context"
 	"fmt"
+	"mime/multipart"
+
+	"github.com/ireuven89/auctions/auction-service/domain"
+	"github.com/ireuven89/auctions/auction-service/internal/service"
 
 	"github.com/go-kit/kit/endpoint"
-	"github.com/ireuven89/auctions/auction-service/auction"
 )
 
 type GetAuctionRequestModel struct {
@@ -13,10 +16,10 @@ type GetAuctionRequestModel struct {
 }
 
 type GetAuctionResponseModel struct {
-	auction *auction.Auction
+	auction *domain.Auction
 }
 
-func MakeEndpointGetAuction(s Service) endpoint.Endpoint {
+func MakeEndpointGetAuction(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req, ok := request.(GetAuctionRequestModel)
 		if !ok {
@@ -37,14 +40,14 @@ func MakeEndpointGetAuction(s Service) endpoint.Endpoint {
 }
 
 type GetAuctionsRequestModel struct {
-	auction.AuctionRequest
+	domain.AuctionRequest
 }
 
 type GetAuctionsResponseModel struct {
-	auctions []auction.Auction
+	auctions []domain.Auction
 }
 
-func MakeEndpointGetAuctions(s Service) endpoint.Endpoint {
+func MakeEndpointGetAuctions(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req, ok := request.(GetAuctionsRequestModel)
 		if !ok {
@@ -65,14 +68,14 @@ func MakeEndpointGetAuctions(s Service) endpoint.Endpoint {
 }
 
 type CreateAuctionRequestModel struct {
-	auction.AuctionRequest
+	domain.AuctionRequest
 }
 
 type CreateAuctionResponseModel struct {
 	id string
 }
 
-func MakeEndpointCreateAuction(s Service) endpoint.Endpoint {
+func MakeEndpointCreateAuction(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req, ok := request.(CreateAuctionRequestModel)
 		if !ok {
@@ -90,10 +93,10 @@ func MakeEndpointCreateAuction(s Service) endpoint.Endpoint {
 }
 
 type UpdateAuctionRequestModel struct {
-	auction.AuctionRequest
+	domain.AuctionRequest
 }
 
-func MakeEndpointUpdateAuction(s Service) endpoint.Endpoint {
+func MakeEndpointUpdateAuction(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req, ok := request.(UpdateAuctionRequestModel)
 		if !ok {
@@ -114,7 +117,7 @@ type DeleteAuctionRequestModel struct {
 	id string
 }
 
-func MakeEndpointDeleteAuction(s Service) endpoint.Endpoint {
+func MakeEndpointDeleteAuction(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req, ok := request.(DeleteAuctionRequestModel)
 		if !ok {
@@ -124,30 +127,57 @@ func MakeEndpointDeleteAuction(s Service) endpoint.Endpoint {
 		err = s.Delete(ctx, req.id)
 
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("MakeEndpointDeleteAuction %w", err)
 		}
 
 		return nil, nil
 	}
 }
 
-type DeleteAuctionsRequestModel struct {
-	ids []string
+type AuctionItemsRequestModel struct {
+	AuctionID string
+	items     []domain.Item
 }
 
-func MakeEndpointDeleteAuctions(s Service) endpoint.Endpoint {
+func MakeEndpointCreateAuctionItems(s service.Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
-		req, ok := request.(DeleteAuctionsRequestModel)
+		req, ok := request.(AuctionItemsRequestModel)
 		if !ok {
-			return nil, fmt.Errorf("MakeEndpointDeleteAuctions.failed parsing request")
+			return nil, fmt.Errorf("MakeEndpointCreateAuctionItems.failed parsing request")
 		}
 
-		err = s.DeleteMany(ctx, req.ids)
+		err = s.CreateAuctionItems(ctx, req.AuctionID, req.items)
 
 		if err != nil {
-			return nil, fmt.Errorf("MakeEndpointDeleteAuctions failed deleting %w", err)
+			return nil, fmt.Errorf("MakeEndpointCreateAuctionItems %w", err)
 		}
 
 		return nil, nil
 	}
+}
+
+type AuctionPicturesRequestModel struct {
+	ItemID string
+	Files  []*multipart.FileHeader
+}
+
+func MakeEndpointCreateAuctionItemPictures(s service.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req, ok := request.(AuctionPicturesRequestModel)
+		if !ok {
+			return nil, fmt.Errorf("MakeEndpointDeleteAuction.failed parsing request")
+		}
+
+		err = s.CreateAuctionPictures(ctx, req.ItemID, req.Files)
+
+		if err != nil {
+			return nil, fmt.Errorf("MakeEndpointCreateAuctionItems %w", err)
+		}
+
+		return nil, nil
+	}
+}
+
+type CreateItemRequestModel struct {
+	req domain.ItemRequest
 }

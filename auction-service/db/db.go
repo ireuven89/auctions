@@ -14,6 +14,7 @@ import (
 
 var migrationFolder = "/migrations"
 var databaseName = "auctions"
+var gooseUp = goose.Up
 
 func MustNewDB(host, user, password string, port int) (*sql.DB, error) {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/", user, password, host, port)
@@ -48,14 +49,14 @@ func MustNewDB(host, user, password string, port int) (*sql.DB, error) {
 		if err != nil {
 			fmt.Printf("failed connecting db %v with databse name attempt %d", err, attempt)
 			attempt++
-			return nil, err
+			return nil, fmt.Errorf("failed opening db %w", err)
 		}
 
 		return db, nil
 	})
 
 	if err = migrate(db); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed migrating %w", err)
 	}
 
 	return db, nil
@@ -64,6 +65,7 @@ func MustNewDB(host, user, password string, port int) (*sql.DB, error) {
 func migrate(db *sql.DB) error {
 
 	if err := goose.SetDialect("mysql"); err != nil {
+		fmt.Printf("migrate %v", err)
 		return err
 	}
 
@@ -76,10 +78,12 @@ func migrate(db *sql.DB) error {
 	}
 
 	backoff := retry.WithMaxRetries(3, retry.NewConstant(1*time.Second))
+	attemtps := 1
 	err := retry.Do(ctx, backoff, func(ctx context.Context) error {
-		err := goose.Up(db, migrationPath)
+		err := gooseUp(db, migrationPath)
 
 		if err != nil {
+			fmt.Printf("migrate failed %v", err)
 			return retry.RetryableError(err)
 		}
 
@@ -87,7 +91,8 @@ func migrate(db *sql.DB) error {
 	})
 
 	if err != nil {
-		return err
+		fmt.Errorf("migrate failed %v retry number %d", err, attemtps)
+		return fmt.Errorf("migrate %w", err)
 	}
 
 	return nil
