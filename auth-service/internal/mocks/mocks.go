@@ -2,8 +2,9 @@ package mocks
 
 import (
 	"context"
-	"github.com/ireuven89/auctions/auth-service/key"
 	"time"
+
+	"github.com/ireuven89/auctions/auth-service/key"
 
 	"github.com/ireuven89/auctions/auth-service/user"
 )

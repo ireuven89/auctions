@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/ireuven89/auctions/auth-service/key"
 	"log"
 	"net/http"
+
+	"github.com/ireuven89/auctions/auth-service/key"
 
 	"github.com/ireuven89/auctions/auth-service/user"
 
