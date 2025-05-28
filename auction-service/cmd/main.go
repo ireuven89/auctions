@@ -16,9 +16,13 @@ import (
 func main() {
 
 	cfg, err := config.LoadConfig()
-
 	if err != nil {
 		panic(fmt.Errorf("failed loading config %v", err))
+	}
+	publicKey, err := config.LoadRSAPublicKeyFromEnv()
+
+	if err != nil {
+		panic(fmt.Errorf("failed loading publicKey %v", err))
 	}
 	logger, _ := zap.NewDevelopment()
 	dbConn, err := db.MustNewDB(cfg.Sql.Host, cfg.Sql.User, cfg.Sql.Password, cfg.Sql.Port)
@@ -28,10 +32,11 @@ func main() {
 	}
 
 	router := httprouter.New()
+
 	repo := repository.NewAuctionRepo(dbConn, logger)
 	itemRepo := repository.NewItemRepo(dbConn, logger)
 	service := service.NewService(repo, itemRepo, logger)
 	transport := internal.NewTransport(service, router)
 
-	transport.ListenAndServe(cfg.Server.Port)
+	transport.ListenAndServe(cfg.Server.Port, publicKey)
 }

@@ -195,7 +195,7 @@ func (s *AuctionService) CreateAuctionPictures(ctx context.Context, itemId strin
 	var itemPictures []domain.ItemPicture
 
 	for res := range downloadUrlChannel {
-		itemPictures = append(itemPictures, domain.ItemPicture{ID: generateID(), ItemID: itemId, DownloadUrl: res})
+		itemPictures = append(itemPictures, domain.ItemPicture{ID: generateID(), ItemID: itemId, DownloadLink: res})
 	}
 
 	if err := s.itemPictureRepo.CreateItemPictureBulk(ctx, itemPictures); err != nil {

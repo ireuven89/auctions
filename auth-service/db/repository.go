@@ -44,6 +44,7 @@ type Repository interface {
 	SaveRefreshToken(ctx context.Context, token string, userInfo string, ttl time.Duration) error
 	GetToken(ctx context.Context, token string) (string, error)
 	GetRefreshRate(ctx context.Context, token string) (int, error)
+	DeleteUser(ctx context.Context, id string) error
 }
 
 type UserRepo struct {
@@ -92,11 +93,18 @@ func (r *UserRepo) FindUser(ctx context.Context, id string) (*user.User, error) 
 func (r *UserRepo) SaveRefreshToken(ctx context.Context, token string, userInfo string, ttl time.Duration) error {
 
 	//set refresh
-	statusCmd := r.redis.HSet(ctx, fmt.Sprintf(refresh, token), userInfo, ttl, fmt.Sprintf(refreshRate, token), MaxRefreshRate, ttl)
+	statusCmd := r.redis.HSet(ctx,
+		fmt.Sprintf(refresh, token),
+		map[string]interface{}{
+			"user_info":    userInfo,
+			"refresh_rate": MaxRefreshRate,
+		})
 
 	if statusCmd.Err() != nil {
 		return fmt.Errorf("failed inserting to redis %w", statusCmd.Err())
 	}
+
+	r.redis.Expire(ctx, fmt.Sprintf(refresh, token), ttl)
 
 	_, err := statusCmd.Result()
 	if err != nil {
@@ -170,4 +178,14 @@ func (r *UserRepo) FindUserByCredentials(ctx context.Context, identifier string)
 	userResult := toUser(userDB)
 
 	return userResult, nil
+}
+
+func (r *UserRepo) DeleteUser(ctx context.Context, id string) error {
+	q := "delete from users where id = ?"
+
+	if _, err := r.db.ExecContext(ctx, q, id); err != nil {
+		return fmt.Errorf("UserRepo.DeleteUser failed deleting user %w", err)
+	}
+
+	return nil
 }

@@ -45,7 +45,6 @@ type AuctionRepository struct {
 }
 
 func NewAuctionRepo(db *sql.DB, logger *zap.Logger) service.Repository {
-
 	return &AuctionRepository{
 		logger: logger,
 		db:     db,

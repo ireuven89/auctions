@@ -35,7 +35,9 @@ type ItemPictureRequest struct {
 }
 
 type ItemPicture struct {
-	ID          string
-	DownloadUrl string
-	ItemID      string
+	ID           string
+	ItemID       string
+	AuctionID    string
+	Name         string
+	DownloadLink string
 }

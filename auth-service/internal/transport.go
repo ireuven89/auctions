@@ -80,6 +80,7 @@ func RegisterRoutes(router *httprouter.Router, s Service) {
 	router.Handler(http.MethodPost, "/auth/refresh", refreshHandler)
 	router.Handler(http.MethodPost, "/auth/logout", logoutHandler)
 	router.Handler(http.MethodGet, "/auth/jwks", publicKeyHandler)
+	router.Handler(http.MethodDelete, "/auth/user/:id", publicKeyHandler)
 }
 
 func decodeRegisterUserRequest(ctx context.Context, r *http.Request) (interface{}, error) {
@@ -178,7 +179,7 @@ func encodeGetPublicResponse(ctx context.Context, w http.ResponseWriter, respons
 	}
 
 	formatted := map[string]interface{}{
-		"jwks": res.publicKey,
+		"jwks": res.PublicKey.Keys,
 	}
 
 	w.Header().Set("Content-Type", "application/json")

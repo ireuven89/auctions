@@ -33,6 +33,7 @@ type AWSConfig struct {
 		Primary string `mapstructure:"primary"`
 	} `mapstructure:"s3_buckets"`
 	S3Region string
+	KMSKeyID string `mapstructure:"kms_key_id"`
 }
 
 const defaultConfigDir = "/config"
@@ -89,4 +90,14 @@ func LoadRSAPublicKeyFromEnv() (*rsa.PublicKey, error) {
 		return nil, fmt.Errorf("not RSA public key")
 	}
 	return rsaPub, nil
+}
+
+func MustNewEnvVar(env string) (string, error) {
+	envVar := os.Getenv(env)
+
+	if envVar == "" {
+		return "", nil
+	}
+
+	return envVar, nil
 }

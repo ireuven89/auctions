@@ -20,9 +20,9 @@ type ItemPictureDB struct {
 func toItemPicture(db ItemPictureDB) domain.ItemPicture {
 
 	return domain.ItemPicture{
-		ID:          db.ID,
-		DownloadUrl: db.DownloadLink,
-		ItemID:      db.ItemId,
+		ID:           db.ID,
+		DownloadLink: db.DownloadLink,
+		ItemID:       db.ItemId,
 	}
 }
 
@@ -34,7 +34,7 @@ type ItemPictureRepository struct {
 func (r *ItemPictureRepository) CreateItemPicture(ctx context.Context, picture domain.ItemPicture) error {
 	q := "INSERT INTO items_picture (id, item_id, download_link) values (?, ?, ?)"
 
-	if _, err := r.db.ExecContext(ctx, q, picture.ID, picture.ItemID, picture.DownloadUrl); err != nil {
+	if _, err := r.db.ExecContext(ctx, q, picture.ID, picture.ItemID, picture.DownloadLink); err != nil {
 		return fmt.Errorf("ItemPictureRepository.CreateItemPicture %w", err)
 	}
 	return nil
@@ -62,7 +62,7 @@ func prepareInsertItemsPictures(itemPictures []domain.ItemPicture) (string, []in
 	for i, item := range itemPictures {
 		placeholder := fmt.Sprintf("($%d, $%d, $%d)", i*3+1, i*3+2, i*3+3)
 		placeHolders = append(placeHolders, placeholder)
-		values = append(values, item.ID, item.ItemID, item.DownloadUrl)
+		values = append(values, item.ID, item.ItemID, item.DownloadLink)
 	}
 
 	query := fmt.Sprintf("INSERT INTO items_picture (id, item_id, download_link) VALUES %s",

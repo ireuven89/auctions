@@ -82,7 +82,7 @@ func (r *ItemRepository) FindWithPictures(ctx context.Context, auctionId string)
 
 func (r *ItemRepository) CreateItemPicture(ctx context.Context, picture domain.ItemPicture) error {
 	if _, err := r.db.ExecContext(ctx, "insert into item_pictures (id, item_id, download_url) values (?, ?, ?)",
-		picture.ID, picture.ItemID, picture.DownloadUrl); err != nil {
+		picture.ID, picture.ItemID, picture.DownloadLink); err != nil {
 		return fmt.Errorf("ItemRepository.CreateItemPicture %w", err)
 	}
 

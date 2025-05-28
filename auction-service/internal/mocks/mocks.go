@@ -86,11 +86,41 @@ func (m *ItemRepositoryMock) CreateBulk(ctx context.Context, items []domain.Item
 }
 
 func (m *ItemRepositoryMock) Delete(ctx context.Context, id string) error {
+	args := m.Called(id)
+	return args.Error(0)
+}
+
+// MockAuctionRepository mocks the db.Repository interface
+type MockAuctionRepository struct {
+	mock.Mock
+}
+
+func (m *MockAuctionRepository) Find(ctx context.Context, id string) (domain.Auction, error) {
+	args := m.Called(ctx, id)
+	return args.Get(0).(domain.Auction), args.Error(1)
+}
+
+func (m *MockAuctionRepository) FindAll(ctx context.Context, request domain.AuctionRequest) ([]domain.Auction, error) {
+	args := m.Called(ctx, request)
+	return args.Get(0).([]domain.Auction), args.Error(1)
+}
+
+func (m *MockAuctionRepository) Update(ctx context.Context, req domain.AuctionRequest) error {
+	args := m.Called(ctx, req)
+	return args.Error(0)
+}
+
+func (m *MockAuctionRepository) Create(ctx context.Context, req domain.AuctionRequest) error {
+	args := m.Called(ctx, req)
+	return args.Error(0)
+}
+
+func (m *MockAuctionRepository) Delete(ctx context.Context, id string) error {
 	args := m.Called(ctx, id)
 	return args.Error(0)
 }
 
-func (m *ItemRepositoryMock) DeleteMany(ctx context.Context, ids []interface{}) error {
+func (m *MockAuctionRepository) DeleteMany(ctx context.Context, ids []interface{}) error {
 	args := m.Called(ctx, ids)
 	return args.Error(0)
 }
@@ -104,4 +134,23 @@ func (m *ItemRepositoryMock) CreateItemPicture(ctx context.Context, picture doma
 	args := m.Called(picture)
 
 	return args.Error(0)
+}
+
+type MockItemRepository struct {
+	GetItemFunc                       func(ctx context.Context, id string) (domain.Item, error)
+	GetItemsBuAuctionFunc             func(ctx context.Context, auctionId string) ([]domain.Item, error)
+	GeItemsWByAuctionWithPicturesFunc func(ctx context.Context, auctionId string) ([]domain.Item, error)
+}
+
+func (m *MockItemRepository) GetItem(ctx context.Context, id string) (domain.Item, error) {
+
+	return m.GetItemFunc(ctx, id)
+}
+func (m *MockItemRepository) GetItemsBuAuction(ctx context.Context, id string) ([]domain.Item, error) {
+
+	return m.GeItemsWByAuctionWithPicturesFunc(ctx, id)
+}
+func (m *MockItemRepository) GeItemsWByAuctionWithPictures(ctx context.Context, id string) ([]domain.Item, error) {
+
+	return m.GeItemsWByAuctionWithPicturesFunc(ctx, id)
 }
