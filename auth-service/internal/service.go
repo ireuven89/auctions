@@ -53,6 +53,7 @@ func NewAuthService(logger *zap.Logger, repo db.Repository, secretName string) (
 	return &service{privateKey: privateKey, publicKey: publicKey, logger: logger, repository: repo}, nil
 }
 
+// TODO this should called in NewAuthService  when secret key is done
 func loadPrivateKeyFromSecretsManager(secretName string) (*rsa.PrivateKey, error) {
 	ctx := context.Background()
 	cfg, err := config.LoadDefaultConfig(ctx)
@@ -81,6 +82,7 @@ func loadPrivateKeyFromSecretsManager(secretName string) (*rsa.PrivateKey, error
 	return privateKey, nil
 }
 
+// TODO this should be removed when secret key is done
 func loadPrivateKeyFromLocal() (*rsa.PrivateKey, error) {
 	privateKeyPath := os.Getenv("JWT_PRIVATE_KEY_PATH")
 
@@ -102,6 +104,7 @@ func loadPrivateKeyFromLocal() (*rsa.PrivateKey, error) {
 	return privateKey, nil
 }
 
+// TODO this should be removed when secret key is done
 func loadPublicKeyFromLocal() (*rsa.PublicKey, error) {
 	publicKeyPath := os.Getenv("JWT_PUBLIC_KEY_PATH")
 
@@ -123,6 +126,7 @@ func loadPublicKeyFromLocal() (*rsa.PublicKey, error) {
 	return publicKey, nil
 }
 
+// TODO this should called in NewAuthService when secret key is done
 func loadPublicKeyFromSecretsManager(secretName string) (*rsa.PublicKey, error) {
 	ctx := context.Background()
 	cfg, err := config.LoadDefaultConfig(ctx)

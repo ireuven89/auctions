@@ -8,14 +8,16 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/ireuven89/auctions/auction-service/domain"
+	"github.com/ireuven89/auctions/auction-service/internal/service"
+
 	kithttp "github.com/go-kit/kit/transport/http"
-	"github.com/ireuven89/auctions/auction-service/auction"
 	"github.com/julienschmidt/httprouter"
 )
 
 var errNotFound = errors.New("not found")
 
-func NewTransport(s Service, router *httprouter.Router) Transport {
+func NewTransport(s service.Service, router *httprouter.Router) Transport {
 
 	transport := Transport{
 		router: router,
@@ -27,7 +29,7 @@ func NewTransport(s Service, router *httprouter.Router) Transport {
 
 type Transport struct {
 	router *httprouter.Router
-	s      Service
+	s      service.Service
 }
 
 type Router interface {
@@ -42,7 +44,7 @@ func (t *Transport) ListenAndServe(port string) {
 	}
 }
 
-func RegisterRoutes(router *httprouter.Router, s Service) {
+func RegisterRoutes(router *httprouter.Router, s service.Service) {
 
 	getAuctionHandler := kithttp.NewServer(
 		MakeEndpointGetAuction(s),
@@ -78,20 +80,53 @@ func RegisterRoutes(router *httprouter.Router, s Service) {
 		kithttp.EncodeJSONResponse,
 		kithttp.ServerErrorEncoder(errorEncoder),
 	)
+	/*
+		deleteAuctionsHandler := kithttp.NewServer(
+			MakeEndpointDeleteAuctions(s),
+			decodeDeleteAuctionsRequest,
+			kithttp.EncodeJSONResponse,
+			kithttp.ServerErrorEncoder(errorEncoder),
+		)
 
-	deleteAuctionsHandler := kithttp.NewServer(
-		MakeEndpointDeleteAuctions(s),
-		decodeDeleteAuctionsRequest,
-		kithttp.EncodeJSONResponse,
-		kithttp.ServerErrorEncoder(errorEncoder),
-	)
+		getAuctionItemsHandler := kithttp.NewServer(
+			MakeEndpointDeleteAuctions(s),
+			decodeDeleteAuctionsRequest,
+			kithttp.EncodeJSONResponse,
+			kithttp.ServerErrorEncoder(errorEncoder),
+		)
+
+		createAuctionItemsHandler := kithttp.NewServer(
+			MakeEndpointDeleteAuctions(s),
+			decodeDeleteAuctionsRequest,
+			kithttp.EncodeJSONResponse,
+			kithttp.ServerErrorEncoder(errorEncoder),
+		)
+
+		updateAuctionItemHandler := kithttp.NewServer(
+			MakeEndpointDeleteAuctions(s),
+			decodeDeleteAuctionsRequest,
+			kithttp.EncodeJSONResponse,
+			kithttp.ServerErrorEncoder(errorEncoder),
+		)
+
+		updateAuctionItemHandler := kithttp.NewServer(
+			MakeEndpointDeleteAuctions(s),
+			decodeDeleteAuctionsRequest,
+			kithttp.EncodeJSONResponse,
+			kithttp.ServerErrorEncoder(errorEncoder),
+		)*/
 
 	router.Handler(http.MethodGet, "/auctions/:id", getAuctionHandler)
 	router.Handler(http.MethodGet, "/auctions", getAuctionsHandler)
 	router.Handler(http.MethodPost, "/auctions", createAuctionHandler)
 	router.Handler(http.MethodPut, "/auctions/:id", updateAuctionHandler)
 	router.Handler(http.MethodDelete, "/auctions/:id", deleteAuctionHandler)
-	router.Handler(http.MethodDelete, "/auctions", deleteAuctionsHandler)
+	/*	router.Handler(http.MethodDelete, "/auctions", deleteAuctionsHandler)
+
+		router.Handler(http.MethodGet, "/auctions/:id/items", getAuctionItemsHandler)
+		router.Handler(http.MethodPost, "/auctions/:id/items", createAuctionItemsHandler)
+		router.Handler(http.MethodPut, "/auctions/:id/items/:item_id", updateAuctionItemHandler)*/
+
 }
 
 func decodeGetAuctionRequest(c context.Context, r *http.Request) (interface{}, error) {
@@ -118,8 +153,8 @@ func decodeGetAuctionsRequest(c context.Context, r *http.Request) (interface{}, 
 	name := r.URL.Query().Get("name")
 
 	return GetAuctionsRequestModel{
-		AuctionRequest: auction.AuctionRequest{
-			Name: name,
+		AuctionRequest: domain.AuctionRequest{
+			Description: name,
 		},
 	}, nil
 }
@@ -187,24 +222,11 @@ func decodeDeleteAuctionRequest(c context.Context, r *http.Request) (interface{}
 	return req, nil
 }
 
-func decodeDeleteAuctionsRequest(c context.Context, r *http.Request) (interface{}, error) {
-	var ids []string
-
-	if err := json.NewDecoder(r.Body).Decode(&ids); err != nil {
-		fmt.Printf("decodeDeleteAuctionsRequest failed decoding request %v", err)
-		return nil, fmt.Errorf("decodeDeleteAuctionsRequest %w", err)
-	}
-
-	return DeleteAuctionsRequestModel{
-		ids: ids,
-	}, nil
-}
-
 func errorEncoder(_ context.Context, err error, w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json")
 
 	switch {
-	case errors.Is(err, auction.ErrNotFound):
+	case errors.Is(err, domain.ErrNotFound):
 		w.WriteHeader(http.StatusNotFound)
 	default:
 		w.WriteHeader(http.StatusInternalServerError)
