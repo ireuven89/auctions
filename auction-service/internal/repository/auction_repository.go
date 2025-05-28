@@ -19,7 +19,7 @@ type AuctionDB struct {
 	Description  string    `db:"description"`
 	Regions      []byte    `db:"regions"`
 	InitialOffer int64     `db:"initial_offer"`
-	CurrentBid   int64     `db:"current_highest"`
+	CurrentBid   float64   `db:"current_highest"`
 	Status       string    `db:"status"`
 	CreatedAt    time.Time `db:"created_at"`
 	UpdatedAt    time.Time `db:"updated_at"`
