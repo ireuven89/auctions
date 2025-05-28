@@ -2,14 +2,18 @@ package internal
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/rsa"
-	"encoding/base64"
+	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"math/big"
+	"log"
 	"os"
+	"sync"
 	"time"
+
+	"github.com/ireuven89/auctions/shared/jwksprovider"
 
 	"github.com/ireuven89/auctions/auth-service/user"
 
@@ -28,29 +32,40 @@ type Service interface {
 	Login(ctx context.Context, userIdentifier, password string) (*key.Token, error)
 	RefreshToken(ctx context.Context, refreshToken string) (string, error)
 	GenerateRefreshToken(ctx context.Context, userInfo string) (string, error)
-	GetPublicKey(ctx context.Context) key.JWK
+	GetPublicKey(ctx context.Context) jwksprovider.JWKS
 	Register(ctx context.Context, user user.User) (string, string, error)
 }
 
 type service struct {
-	logger      *zap.Logger
-	privateKey  *rsa.PrivateKey
-	publicKey   *rsa.PublicKey
-	publicKeyId string
-	repository  db.Repository
+	logger       *zap.Logger
+	privateKey   *rsa.PrivateKey
+	mu           sync.RWMutex
+	publicKey    jwksprovider.JWKS
+	RotateTicker *time.Ticker
+	KeyMutex     sync.RWMutex
+	repository   db.Repository
 }
 
 const refreshTokenTTL = 24 * 30 * time.Hour
 const accessTokenTTL = 15 * time.Minute
 
 func NewAuthService(logger *zap.Logger, repo db.Repository, secretName string) (Service, error) {
+
 	privateKey, err := loadPrivateKeyFromLocal()
 	if err != nil {
 		return nil, fmt.Errorf("failed starting service %w", err)
 	}
-
 	publicKey, err := loadPublicKeyFromLocal()
-	return &service{privateKey: privateKey, publicKey: publicKey, logger: logger, repository: repo}, nil
+
+	if err != nil {
+		return nil, fmt.Errorf("failed starting service %w", err)
+	}
+
+	s := service{privateKey: privateKey, publicKey: generateJWKSFromPublicKey(publicKey), logger: logger, repository: repo, RotateTicker: time.NewTicker(10 * time.Minute)}
+
+	go s.startKeyRotation()
+
+	return &s, nil
 }
 
 func loadPrivateKeyFromSecretsManager(secretName string) (*rsa.PrivateKey, error) {
@@ -79,6 +94,23 @@ func loadPrivateKeyFromSecretsManager(secretName string) (*rsa.PrivateKey, error
 	}
 
 	return privateKey, nil
+}
+
+func (s *service) startPrivateKeyRefresher(interval time.Duration) {
+	go func() {
+		for {
+			key, err := loadPrivateKeyFromSecretsManager("")
+			if err != nil {
+				log.Printf("Failed to reload private key: %v", err)
+			} else {
+				s.mu.Lock()
+				s.privateKey = key
+				s.mu.Unlock()
+				log.Println("Private key reloaded successfully")
+			}
+			time.Sleep(interval)
+		}
+	}()
 }
 
 func loadPrivateKeyFromLocal() (*rsa.PrivateKey, error) {
@@ -151,27 +183,47 @@ func loadPublicKeyFromSecretsManager(secretName string) (*rsa.PublicKey, error) 
 	return publicKey, nil
 }
 
-func (s *service) SignToken(ctx context.Context, user user.User) (string, error) {
+func (s *service) SignToken(ctx context.Context, userInfo user.User) (string, error) {
 	claims := jwt.MapClaims{
-		"sub":   user.ID,
+		"sub":   userInfo.ID,
 		"exp":   time.Now().Add(accessTokenTTL).Unix(),
 		"iat":   time.Now().Unix(),
-		"email": user.Email,
+		"email": userInfo.Email,
 	}
 
+	jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+
 	return token.SignedString(s.privateKey)
 }
 
-func (s *service) GetPublicKey(ctx context.Context) key.JWK {
+func (s *service) GetPublicKey(ctx context.Context) jwksprovider.JWKS {
 
-	return key.JWK{
-		E:   base64.RawURLEncoding.EncodeToString(big.NewInt(int64(s.publicKey.E)).Bytes()),
-		N:   base64.RawURLEncoding.EncodeToString((s.publicKey.N).Bytes()),
-		Kty: "RSA",
-		Alg: jwt.SigningMethodRS256.Name,
-		Use: "sig",
-		Kid: "default",
+	return s.publicKey
+}
+
+func (s *service) startKeyRotation() {
+	for range s.RotateTicker.C {
+		newKey, _ := rsa.GenerateKey(rand.Reader, 2048)
+		s.KeyMutex.Lock()
+		s.privateKey = newKey
+		s.publicKey = generateJWKSFromPublicKey(&newKey.PublicKey)
+		s.KeyMutex.Unlock()
+		log.Println("🔄 AuthService rotated RSA key")
+	}
+}
+
+// generateJWKSFromPublicKey - this method exposes on ly the public key
+func generateJWKSFromPublicKey(pub *rsa.PublicKey) jwksprovider.JWKS {
+	jwk := map[string]interface{}{
+		"kty": "RSA",
+		"kid": "current",
+		"n":   pub.N.String(),
+		"e":   "AQAB",
+	}
+	raw, _ := json.Marshal(jwk)
+	return jwksprovider.JWKS{
+		Keys: []json.RawMessage{raw},
 	}
 }
 

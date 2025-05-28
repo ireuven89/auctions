@@ -2,8 +2,10 @@ package mocks
 
 import (
 	"context"
-	"github.com/ireuven89/auctions/auth-service/key"
+	"github.com/ireuven89/auctions/shared/jwksprovider"
 	"time"
+
+	"github.com/ireuven89/auctions/auth-service/key"
 
 	"github.com/ireuven89/auctions/auth-service/user"
 )
@@ -15,6 +17,7 @@ type MockRepo struct {
 	FindUserByCredentialsFunc func(ctx context.Context, identifier string) (*user.User, error)
 	GetTokenFunc              func(ctx context.Context, token string) (string, error)
 	SaveRefreshTokenFunc      func(ctx context.Context, token string, userId string, ttl time.Duration) error
+	DeleteUserFunc            func(ctx context.Context, id string) error
 }
 
 func (m *MockRepo) FindUser(ctx context.Context, id string) (*user.User, error) {
@@ -37,6 +40,10 @@ func (m *MockRepo) CreateUser(ctx context.Context, u user.User) error {
 	return m.CreateUserFunc(ctx, u)
 }
 
+func (m *MockRepo) DeleteUser(ctx context.Context, id string) error {
+	return m.DeleteUserFunc(ctx, id)
+}
+
 // MockService embeds service.Service and mocks token functions
 type MockService struct {
 	PubKey key.JWK
@@ -45,7 +52,7 @@ type MockService struct {
 	generateRefreshToken func(ctx context.Context, id string) (string, error)
 	LoginFunc            func(ctx context.Context, userIdentifier, password string) (*key.Token, error)
 	RefreshTokenFunc     func(ctx context.Context, refreshToken string) (string, error)
-	GetPublicKeyFunc     func(ctx context.Context) key.JWK
+	GetPublicKeyFunc     func(ctx context.Context) jwksprovider.JWKS
 	RegisterFunc         func(ctx context.Context, user user.User) (string, string, error)
 }
 
@@ -62,7 +69,7 @@ func (m *MockService) Login(ctx context.Context, userIdentifier, password string
 func (m *MockService) RefreshToken(ctx context.Context, refreshToken string) (string, error) {
 	return m.RefreshTokenFunc(ctx, refreshToken)
 }
-func (m *MockService) GetPublicKey(ctx context.Context) key.JWK {
+func (m *MockService) GetPublicKey(ctx context.Context) jwksprovider.JWKS{
 	return m.GetPublicKeyFunc(ctx)
 }
 

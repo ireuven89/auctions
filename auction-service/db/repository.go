@@ -2,6 +2,7 @@ package db
 
 import (
 	"github.com/ireuven89/auctions/auction-service/auction"
+	"github.com/ireuven89/auctions/auction-service/internal"
 
 	"context"
 	"database/sql"
@@ -28,21 +29,12 @@ func toAuction(db AuctionDB) auction.Auction {
 	}
 }
 
-type Repository interface {
-	Find(ctx context.Context, id string) (auction.Auction, error)
-	FindAll(ctx context.Context, request auction.AuctionRequest) ([]auction.Auction, error)
-	Update(ctx context.Context, auction auction.AuctionRequest) error
-	Create(ctx context.Context, auction auction.AuctionRequest) error
-	Delete(ctx context.Context, id string) error
-	DeleteMany(ctx context.Context, ids []interface{}) error
-}
-
 type AuctionRepository struct {
 	logger *zap.Logger
 	db     *sql.DB
 }
 
-func NewRepository(db *sql.DB, logger *zap.Logger) Repository {
+func NewRepository(db *sql.DB, logger *zap.Logger) internal.Repository {
 
 	return &AuctionRepository{
 		logger: logger,

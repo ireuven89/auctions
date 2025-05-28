@@ -14,6 +14,7 @@ type Config struct {
 	Sql    DBConfig     `mapstructure:"database"`
 	Redis  DBConfig     `mapstructure:"redis"`
 	Server ServerConfig `mapstructure:"server"`
+	AWS    AWSConfig    `mapstructure:"aws"`
 }
 
 type ServerConfig struct {
@@ -25,6 +26,10 @@ type DBConfig struct {
 	User     string `mapstructure:"user"`
 	Password string `mapstructure:"password"`
 	Port     int    `mapstructure:"port"`
+}
+
+type AWSConfig struct {
+	KMSKeyID string `mapstructure:"kms_key_id"`
 }
 
 const defaultConfigDir = "/config"
@@ -81,4 +86,14 @@ func LoadRSAPublicKeyFromEnv() (*rsa.PublicKey, error) {
 		return nil, fmt.Errorf("not RSA public key")
 	}
 	return rsaPub, nil
+}
+
+func MustNewEnvVar(env string) (string, error) {
+	envVar := os.Getenv(env)
+
+	if envVar == "" {
+		return "", nil
+	}
+
+	return envVar, nil
 }

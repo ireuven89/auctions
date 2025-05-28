@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/ireuven89/auctions/auth-service/key"
-	user2 "github.com/ireuven89/auctions/auth-service/user"
+	"github.com/ireuven89/auctions/shared/jwksprovider"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	user2 "github.com/ireuven89/auctions/auth-service/user"
 )
 
 func TestDecodeRegisterUserRequest_Success(t *testing.T) {
@@ -122,22 +123,35 @@ func TestDecodeGetPublicRequest(t *testing.T) {
 }
 
 func TestEncodeGetPublicResponse_Success(t *testing.T) {
-	resp := GetPublicKeyResponse{publicKey: key.JWK{E: "abc"}} // Capitalized field
+	resp := GetPublicKeyResponse{
+		PublicKey: jwksprovider.JWKS{
+			Keys: []json.RawMessage{json.RawMessage(`"k"`)},
+		},
+	}
+
 	w := httptest.NewRecorder()
 	err := encodeGetPublicResponse(context.Background(), w, resp)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
+
 	var m map[string]interface{}
-	if err := json.Unmarshal(w.Body.Bytes(), &m); err != nil {
+	if err = json.Unmarshal(w.Body.Bytes(), &m); err != nil {
 		t.Fatalf("invalid JSON: %v", err)
 	}
-	jwks, ok := m["jwks"].(map[string]interface{})
+
+	jwks, ok := m["jwks"].([]interface{})
 	if !ok {
 		t.Errorf("jwks key missing or wrong type: %+v", m)
 	}
-	if jwks["e"] != "abc" {
-		t.Errorf("unexpected jwks output: %+v", jwks)
+
+	if len(jwks) != 1 {
+		t.Errorf("expected 1 jwk, got %d", len(jwks))
+	}
+
+	// Check if the first key matches what we put in
+	if jwks[0] != "k" {
+		t.Errorf("unexpected jwk value: got %+v, want %q", jwks[0], "k")
 	}
 }
 

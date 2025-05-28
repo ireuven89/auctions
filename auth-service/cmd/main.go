@@ -21,6 +21,12 @@ func main() {
 		panic(err)
 	}
 
+	keyId, err := config.MustNewEnvVar("KMS_KEY_ID")
+
+	if err != nil {
+		panic(err)
+	}
+
 	authDB, err := db.MustNewDB(cfg.Sql.Host, cfg.Sql.User, cfg.Sql.Password, cfg.Sql.Port)
 	if err != nil {
 		panic(err)
@@ -32,7 +38,7 @@ func main() {
 	authRepo := db.New(logger, authDB, redisDB)
 
 	router := httprouter.New()
-	s, err := internal.NewAuthService(logger, authRepo, "")
+	s, err := internal.NewAuthService(logger, authRepo, keyId)
 
 	if err != nil {
 		panic(err)

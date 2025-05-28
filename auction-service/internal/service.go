@@ -5,9 +5,10 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/ireuven89/auctions/auction-service/domain"
+
 	"github.com/google/uuid"
 	"github.com/ireuven89/auctions/auction-service/auction"
-	"github.com/ireuven89/auctions/auction-service/db"
 	"go.uber.org/zap"
 )
 
@@ -20,16 +21,33 @@ type Service interface {
 	DeleteMany(ctx context.Context, ids []string) error
 }
 
-type AuctionService struct {
-	repo   db.Repository
-	logger *zap.Logger
+type ItemRepository interface {
+	GetItem(ctx context.Context, id string) (domain.Item, error)
+	GetItemsBuAuction(ctx context.Context, id string) ([]domain.Item, error)
+	GeItemsWByAuctionWithPictures(ctx context.Context, id string) ([]domain.Item, error)
 }
 
-func NewService(repo db.Repository, logger *zap.Logger) Service {
+type Repository interface {
+	Find(ctx context.Context, id string) (auction.Auction, error)
+	FindAll(ctx context.Context, request auction.AuctionRequest) ([]auction.Auction, error)
+	Update(ctx context.Context, auction auction.AuctionRequest) error
+	Create(ctx context.Context, auction auction.AuctionRequest) error
+	Delete(ctx context.Context, id string) error
+	DeleteMany(ctx context.Context, ids []interface{}) error
+}
+
+type AuctionService struct {
+	repo     Repository
+	itemRepo ItemRepository
+	logger   *zap.Logger
+}
+
+func NewService(repo Repository, itemRepo ItemRepository, logger *zap.Logger) Service {
 
 	return &AuctionService{
-		logger: logger,
-		repo:   repo,
+		logger:   logger,
+		repo:     repo,
+		itemRepo: itemRepo,
 	}
 }
 

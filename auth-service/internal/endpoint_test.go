@@ -2,24 +2,29 @@ package internal
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"github.com/ireuven89/auctions/shared/jwksprovider"
+	"testing"
+
 	"github.com/ireuven89/auctions/auth-service/internal/mocks"
 	"github.com/ireuven89/auctions/auth-service/key"
 	user2 "github.com/ireuven89/auctions/auth-service/user"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 // GET PUBLIC KEY
 func TestMakeEndpointGetPublicKey(t *testing.T) {
-	mock := &mocks.MockService{GetPublicKeyFunc: func(ctx context.Context) key.JWK {
-		return key.JWK{E: "PUBKEY"}
+	mock := &mocks.MockService{GetPublicKeyFunc: func(ctx context.Context) jwksprovider.JWKS {
+		return jwksprovider.JWKS{
+			Keys: []json.RawMessage{[]byte{'E'}},
+		}
 	}}
 	endpoint := MakeEndpointGetPublicKey(mock)
 
 	resp, err := endpoint(context.Background(), nil)
 	assert.NoError(t, err)
-	assert.Equal(t, key.JWK{E: "PUBKEY"}, resp.(GetPublicKeyResponse).publicKey)
+	assert.Equal(t, []json.RawMessage{[]byte{'E'}}, resp.(GetPublicKeyResponse).PublicKey)
 }
 
 // REGISTER USER

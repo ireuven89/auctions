@@ -2,6 +2,7 @@ package internal
 
 import (
 	"context"
+	"crypto/rsa"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,10 +11,9 @@ import (
 
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/ireuven89/auctions/auction-service/auction"
+	http2 "github.com/ireuven89/auctions/shared/http"
 	"github.com/julienschmidt/httprouter"
 )
-
-var errNotFound = errors.New("not found")
 
 func NewTransport(s Service, router *httprouter.Router) Transport {
 
@@ -30,13 +30,11 @@ type Transport struct {
 	s      Service
 }
 
-type Router interface {
-	Handle(method, path string, handler http.Handler)
-}
-
-func (t *Transport) ListenAndServe(port string) {
-	log.Printf("Starting auctions server on port %s...", port)
-	err := http.ListenAndServe(":"+port, t.router)
+func (t *Transport) ListenAndServe(port string, publicKey *rsa.PublicKey) {
+	log.Printf("starting auction service on port %s", port)
+	jwtMw := http2.JWTMiddleware(publicKey, []string{"/login", "/health"})
+	wrappedRouter := jwtMw(t.router)
+	err := http.ListenAndServe(":"+port, wrappedRouter)
 	if err != nil {
 		log.Fatalf("Server failed to start: %v", err)
 	}

@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"testing"
 
+	"github.com/ireuven89/auctions/auction-service/internal/mocks"
+
 	"github.com/google/uuid"
 	"github.com/ireuven89/auctions/auction-service/auction"
 	"github.com/stretchr/testify/assert"
@@ -12,45 +14,11 @@ import (
 	"go.uber.org/zap"
 )
 
-// MockRepository mocks the db.Repository interface
-type MockRepository struct {
-	mock.Mock
-}
-
-func (m *MockRepository) Find(ctx context.Context, id string) (auction.Auction, error) {
-	args := m.Called(ctx, id)
-	return args.Get(0).(auction.Auction), args.Error(1)
-}
-
-func (m *MockRepository) FindAll(ctx context.Context, request auction.AuctionRequest) ([]auction.Auction, error) {
-	args := m.Called(ctx, request)
-	return args.Get(0).([]auction.Auction), args.Error(1)
-}
-
-func (m *MockRepository) Update(ctx context.Context, req auction.AuctionRequest) error {
-	args := m.Called(ctx, req)
-	return args.Error(0)
-}
-
-func (m *MockRepository) Create(ctx context.Context, req auction.AuctionRequest) error {
-	args := m.Called(ctx, req)
-	return args.Error(0)
-}
-
-func (m *MockRepository) Delete(ctx context.Context, id string) error {
-	args := m.Called(ctx, id)
-	return args.Error(0)
-}
-
-func (m *MockRepository) DeleteMany(ctx context.Context, ids []interface{}) error {
-	args := m.Called(ctx, ids)
-	return args.Error(0)
-}
-
 func TestCreateAuction(t *testing.T) {
-	mockRepo := new(MockRepository)
+	mockRepo := new(mocks.MockAuctionRepository)
+	mockitemRepo := new(mocks.MockItemRepository)
 	logger := zap.NewNop()
-	svc := NewService(mockRepo, logger)
+	svc := NewService(mockRepo, mockitemRepo, logger)
 
 	req := auction.AuctionRequest{Name: "Test Auction"}
 	mockRepo.On("Create", mock.Anything, mock.AnythingOfType("auction.AuctionRequest")).Return(nil)
@@ -63,9 +31,10 @@ func TestCreateAuction(t *testing.T) {
 }
 
 func TestFetchAuction_NotFound(t *testing.T) {
-	mockRepo := new(MockRepository)
+	mockRepo := new(mocks.MockAuctionRepository)
+	mockitemRepo := new(mocks.MockItemRepository)
 	logger := zap.NewNop()
-	svc := NewService(mockRepo, logger)
+	svc := NewService(mockRepo, mockitemRepo, logger)
 
 	mockRepo.On("Find", mock.Anything, "not_found").Return(auction.Auction{}, sql.ErrNoRows)
 
@@ -77,9 +46,10 @@ func TestFetchAuction_NotFound(t *testing.T) {
 }
 
 func TestUpdateAuction(t *testing.T) {
-	mockRepo := new(MockRepository)
+	mockRepo := new(mocks.MockAuctionRepository)
+	mockitemRepo := new(mocks.MockItemRepository)
 	logger := zap.NewNop()
-	svc := NewService(mockRepo, logger)
+	svc := NewService(mockRepo, mockitemRepo, logger)
 
 	req := auction.AuctionRequest{ID: uuid.New().String(), Name: "Updated Auction"}
 	mockRepo.On("Update", mock.Anything, req).Return(nil)
@@ -91,9 +61,10 @@ func TestUpdateAuction(t *testing.T) {
 }
 
 func TestDeleteAuction(t *testing.T) {
-	mockRepo := new(MockRepository)
+	mockRepo := new(mocks.MockAuctionRepository)
+	mockitemRepo := new(mocks.MockItemRepository)
 	logger := zap.NewNop()
-	svc := NewService(mockRepo, logger)
+	svc := NewService(mockRepo, mockitemRepo, logger)
 
 	id := uuid.New().String()
 	mockRepo.On("Delete", mock.Anything, id).Return(nil)

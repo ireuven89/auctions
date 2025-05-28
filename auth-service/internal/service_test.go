@@ -1,12 +1,13 @@
 package internal
 
 import (
-	"github.com/ireuven89/auctions/auth-service/internal/mocks"
-	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/ireuven89/auctions/auth-service/internal/mocks"
+	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 )
 
 func setupTestKeys(t *testing.T) (privPath, pubPath string) {

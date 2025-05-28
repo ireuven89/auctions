@@ -38,6 +38,7 @@ type Repository interface {
 	FindUserByCredentials(ctx context.Context, identifier string) (*user.User, error)
 	SaveRefreshToken(ctx context.Context, token string, userInfo string, ttl time.Duration) error
 	GetToken(ctx context.Context, token string) (string, error)
+	DeleteUser(ctx context.Context, id string) error
 }
 
 type UserRepo struct {
@@ -138,4 +139,14 @@ func (r *UserRepo) FindUserByCredentials(ctx context.Context, identifier string)
 	userResult := toUser(userDB)
 
 	return userResult, nil
+}
+
+func (r *UserRepo) DeleteUser(ctx context.Context, id string) error {
+	q := "delete from users where id = ?"
+
+	if _, err := r.db.ExecContext(ctx, q, id); err != nil {
+		return fmt.Errorf("UserRepo.DeleteUser failed deleting user %w", err)
+	}
+
+	return nil
 }

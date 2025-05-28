@@ -5,14 +5,20 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/ireuven89/auctions/shared/jwksprovider"
+
 	"github.com/ireuven89/auctions/auth-service/user"
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/ireuven89/auctions/auth-service/key"
 )
 
+type GetJWKSesponse struct {
+	jwksprovider.JWKS
+}
+
 type GetPublicKeyResponse struct {
-	publicKey key.JWK
+	PublicKey jwksprovider.JWKS
 }
 
 func MakeEndpointGetPublicKey(s Service) endpoint.Endpoint {
@@ -21,7 +27,7 @@ func MakeEndpointGetPublicKey(s Service) endpoint.Endpoint {
 		publicKey := s.GetPublicKey(ctx)
 
 		return GetPublicKeyResponse{
-			publicKey: publicKey,
+			PublicKey: publicKey,
 		}, nil
 	}
 }
