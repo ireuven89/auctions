@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+
 	"github.com/ireuven89/auctions/auction-service/domain"
 	"go.uber.org/zap"
 )

@@ -4,9 +4,14 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"time"
-
+	aws_config "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/ireuven89/auctions/auction-service/domain"
+	"github.com/ireuven89/auctions/shared/config"
+	"mime/multipart"
+	"os"
+	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -23,14 +28,20 @@ type Repository interface {
 
 type ItemRepository interface {
 	Find(ctx context.Context, id string) (domain.Item, error)
-	FindWithPictures(ctx context.Context, auctionId string) ([]domain.ItemPictureResponse, error)
+	FindWithPictures(ctx context.Context, auctionId string) ([]domain.ItemPicture, error)
 	Update(ctx context.Context, item domain.ItemRequest) error
 	Create(ctx context.Context, auction domain.ItemRequest) error
-	CreateBulk(ctx context.Context, request []domain.ItemRequest) error
+	CreateBulk(ctx context.Context, request []domain.Item) error
+	CreateItemPicture(ctx context.Context, picture domain.ItemPicture) error
 	Delete(ctx context.Context, id string) error
 	FindByAuctionId(ctx context.Context, auctionId string) ([]domain.Item, error)
 }
 
+type ItemPictureRepository interface {
+	CreateItemPicture(ctx context.Context, picture domain.ItemPicture) error
+	DeleteItemPicture(ctx context.Context, id string) error
+	CreateItemPictureBulk(ctx context.Context, picture []domain.ItemPicture) error
+}
 type BidRepository interface {
 	Find(ctx context.Context, id string) (domain.Bid, error)
 	Create(ctx context.Context, bid domain.Bid) error
@@ -41,16 +52,20 @@ type Service interface {
 	Search(ctx context.Context, request domain.AuctionRequest) ([]domain.Auction, error)
 	Update(ctx context.Context, auction domain.AuctionRequest) error
 	Create(ctx context.Context, auction domain.AuctionRequest) (string, error)
+	CreateAuctionItems(ctx context.Context, auctionId string, items []domain.Item) error
+	CreateAuctionPictures(ctx context.Context, id string, request []*multipart.FileHeader) error
 	Delete(ctx context.Context, id string) error
 	DeleteMany(ctx context.Context, ids []string) error
 	PlaceBid(ctx context.Context, bid domain.PlaceBidRequest) error
 }
 
 type AuctionService struct {
-	repo     Repository
-	itemRepo ItemRepository
-	bidRepo  BidRepository
-	logger   *zap.Logger
+	repo            Repository
+	itemRepo        ItemRepository
+	itemPictureRepo ItemPictureRepository
+	bidRepo         BidRepository
+	logger          *zap.Logger
+	awsConfig       config.AWSConfig
 }
 
 func NewService(repo Repository, itemRepo ItemRepository, logger *zap.Logger) Service {
@@ -98,6 +113,21 @@ func (s *AuctionService) Update(ctx context.Context, auction domain.AuctionReque
 	return nil
 }
 
+func (s *AuctionService) CreateAuctionItems(ctx context.Context, auctionId string, items []domain.Item) error {
+
+	for _, item := range items {
+		item.ID = generateID()
+		item.AuctionID = auctionId
+		item.CreatedAt = time.Now()
+	}
+
+	if err := s.itemRepo.CreateBulk(ctx, items); err != nil {
+		return fmt.Errorf("AuctionService.CreateAuctionItems %w", err)
+	}
+
+	return nil
+}
+
 func (s *AuctionService) Create(ctx context.Context, auction domain.AuctionRequest) (string, error) {
 	auction.ID = generateID()
 	auction.CreatedAt = time.Now()
@@ -108,15 +138,18 @@ func (s *AuctionService) Create(ctx context.Context, auction domain.AuctionReque
 		return "", fmt.Errorf("AuctionService.Create failed creating %w", err)
 	}
 
+	var itemPicturesToSave []domain.ItemPicture
+	var pictureFiles []*os.File
+
 	for _, i := range auction.Items {
 		i.ID = generateID()
-		for _, p := range i.Pictures {
-			p.ID = generateID()
+		downloadUrls, err := s.uploadItemImagesToS3(ctx, pictureFiles, i.ID)
+		if err != nil {
+			return "", fmt.Errorf("AuctionService.Create %w", err)
 		}
-	}
-
-	if err := s.itemRepo.CreateBulk(ctx, auction.Items); err != nil {
-		return "", fmt.Errorf("")
+		for index, _ := range i.Pictures {
+			itemPicturesToSave = append(itemPicturesToSave, domain.ItemPicture{ID: generateID(), ItemID: i.ID, DownloadUrl: downloadUrls[index]})
+		}
 	}
 
 	return auction.ID, nil
@@ -149,6 +182,28 @@ func (s *AuctionService) DeleteMany(ctx context.Context, ids []string) error {
 		return fmt.Errorf("AuctionService.DeleteMany failed deleting %w", err)
 	}
 
+	return nil
+}
+
+func (s *AuctionService) CreateAuctionPictures(ctx context.Context, itemId string, files []*multipart.FileHeader) error {
+	downloadUrlChannel := make(chan string, len(files))
+	var wg *sync.WaitGroup
+	for _, file := range files {
+		wg.Add(1)
+		uploadImageToS3(ctx, file, itemId, s.awsConfig.S3Buckets.Primary, downloadUrlChannel, wg)
+	}
+
+	wg.Wait()
+
+	var itemPictures []domain.ItemPicture
+
+	for res := range downloadUrlChannel {
+		itemPictures = append(itemPictures, domain.ItemPicture{ID: generateID(), ItemID: itemId, DownloadUrl: res})
+	}
+
+	if err := s.itemPictureRepo.CreateItemPictureBulk(ctx, itemPictures); err != nil {
+		return fmt.Errorf("AuctionService.CreateAuctionPictures %w", err)
+	}
 	return nil
 }
 
@@ -199,8 +254,7 @@ func (s *AuctionService) PlaceBid(ctx context.Context, req domain.PlaceBidReques
 	})
 }
 
-func (s *AuctionService) ExecuteInTransaction(context.Context, func(ctx context.Context) error) error {
-
+func (s *AuctionService) ExecuteInTransaction(context.Context, func(txCtx context.Context) error) error {
 	return nil
 }
 
@@ -220,4 +274,76 @@ func (s *AuctionService) validateBidAmount(amount float64, auction *domain.Aucti
 		return fmt.Errorf("minimum bid is %.2f", minRequired)
 	}
 	return nil
+}
+
+// Upload a single image and send its S3 URL through the channel
+func uploadImageToS3(ctx context.Context, image *multipart.FileHeader, itemID, bucketName string, urlChan chan string, wg *sync.WaitGroup) {
+	defer wg.Done() // Mark goroutine as done
+
+	cfg, err := aws_config.LoadDefaultConfig(context.TODO(), aws_config.WithRegion("region"))
+	if err != nil {
+		fmt.Println("AWS config error:", err)
+		return
+	}
+
+	file, err := image.Open()
+
+	if err != nil {
+		fmt.Printf("uploadImageToS3 %v", err)
+		return
+	}
+
+	client := s3.NewFromConfig(cfg)
+
+	// Generate unique file name
+	fileKey := fmt.Sprintf("%s/%s", itemID, generateID())
+
+	// Upload to S3
+	_, err = client.PutObject(context.TODO(), &s3.PutObjectInput{
+		Bucket: &bucketName,
+		Key:    &fileKey,
+		Body:   file,
+	})
+	if err != nil {
+		fmt.Println("Upload failed:", err)
+		return
+	}
+
+	// Generate public URL
+	imageURL := fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", bucketName, "region", fileKey)
+
+	// Send result through channel
+	urlChan <- imageURL
+}
+
+func (s *AuctionService) uploadItemImagesToS3(ctx context.Context, images []*os.File, itemID string) ([]string, error) {
+	cfg, err := aws_config.LoadDefaultConfig(ctx, aws_config.WithRegion("region"))
+	if err != nil {
+		return nil, fmt.Errorf("AWS config error: %v", err)
+	}
+
+	client := s3.NewFromConfig(cfg)
+	var uploadedURLs []string
+
+	for _, image := range images {
+		// Generate unique file name
+		fileKey := fmt.Sprintf("%s/%s", itemID, uuid.New().String())
+
+		// Upload image
+		_, err = client.PutObject(context.TODO(), &s3.PutObjectInput{
+			Bucket: &s.awsConfig.S3Buckets.Primary,
+			Key:    &fileKey,
+			Body:   image,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("upload failed: %v", err)
+		}
+
+		// Generate public URL'
+		imageURL := fmt.Sprintf("https://%s.s3.%s.amazonaws.com/%s", "bucketName", "region", fileKey)
+		uploadedURLs = append(uploadedURLs, imageURL)
+
+	}
+
+	return uploadedURLs, nil
 }

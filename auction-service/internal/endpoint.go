@@ -3,9 +3,9 @@ package internal
 import (
 	"context"
 	"fmt"
-
 	"github.com/ireuven89/auctions/auction-service/domain"
 	"github.com/ireuven89/auctions/auction-service/internal/service"
+	"mime/multipart"
 
 	"github.com/go-kit/kit/endpoint"
 )
@@ -127,6 +127,50 @@ func MakeEndpointDeleteAuction(s service.Service) endpoint.Endpoint {
 
 		if err != nil {
 			return nil, err
+		}
+
+		return nil, nil
+	}
+}
+
+type AuctionItemsRequestModel struct {
+	AuctionID string
+	items     []domain.Item
+}
+
+func MakeEndpointCreateAuctionItems(s service.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req, ok := request.(AuctionItemsRequestModel)
+		if !ok {
+			return nil, fmt.Errorf("MakeEndpointCreateAuctionItems.failed parsing request")
+		}
+
+		err = s.CreateAuctionItems(ctx, req.AuctionID, req.items)
+
+		if err != nil {
+			return nil, fmt.Errorf("MakeEndpointCreateAuctionItems %w", err)
+		}
+
+		return nil, nil
+	}
+}
+
+type AuctionPicturesRequestModel struct {
+	ItemID string
+	Files  []*multipart.FileHeader
+}
+
+func MakeEndpointCreateAuctionItemPictures(s service.Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req, ok := request.(AuctionPicturesRequestModel)
+		if !ok {
+			return nil, fmt.Errorf("MakeEndpointDeleteAuction.failed parsing request")
+		}
+
+		err = s.CreateAuctionPictures(ctx, req.ItemID, req.Files)
+
+		if err != nil {
+			return nil, fmt.Errorf("MakeEndpointCreateAuctionItems %w", err)
 		}
 
 		return nil, nil

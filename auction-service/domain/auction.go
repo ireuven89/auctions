@@ -8,10 +8,9 @@ import (
 
 type Auction struct {
 	ID           string
-	Name         string
 	Description  string
 	Regions      []byte
-	InitialOffer int64
+	InitialOffer float64
 	CurrentBid   float64
 	MinIncrement float64
 	Status       AuctionStatus
@@ -21,7 +20,7 @@ type Auction struct {
 
 type AuctionRequest struct {
 	ID           string          `json:"-"`
-	Description  string          `json:"name"`
+	Description  string          `json:"description"`
 	Regions      json.RawMessage `json:"regions"`
 	InitialOffer int64           `json:"initialOffer"`
 	Status       string          `json:"status"`

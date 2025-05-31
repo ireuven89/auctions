@@ -1,6 +1,10 @@
 package domain
 
-import "time"
+import (
+	"mime/multipart"
+	"os"
+	"time"
+)
 
 type Item struct {
 	ID          string
@@ -21,11 +25,17 @@ type ItemRequest struct {
 	ID          string
 	Description string
 	AuctionID   string
-	Pictures    []ItemPicture
+	Pictures    []*os.File
+}
+
+type ItemPictureRequest struct {
+	ID     string
+	File   *multipart.FileHeader
+	ItemID string
 }
 
 type ItemPicture struct {
-	ID           string
-	DownloadLink string
-	ItemID       string
+	ID          string
+	DownloadUrl string
+	ItemID      string
 }

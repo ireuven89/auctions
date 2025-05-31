@@ -24,22 +24,6 @@ func ToItem(item ItemDB) domain.Item {
 	}
 }
 
-type ItemPictureDB struct {
-	ID           string `db:"id"`
-	DownloadLink string `db:"download_link"`
-	ItemId       string `db:"item_id"`
-	AuctionID    string `db:"auction_id"`
-}
-
-func toItemResponse(item ItemPictureDB) domain.ItemPictureResponse {
-
-	return domain.ItemPictureResponse{
-		ID:           item.ID,
-		AuctionID:    item.AuctionID,
-		DownloadLink: item.ItemId,
-	}
-}
-
 type ItemRepository struct {
 	logger *zap.Logger
 	db     *sql.DB
@@ -70,7 +54,7 @@ func (r *ItemRepository) Find(ctx context.Context, id string) (domain.Item, erro
 
 	return ToItem(itemDB), nil
 }
-func (r *ItemRepository) FindWithPictures(ctx context.Context, auctionId string) ([]domain.ItemPictureResponse, error) {
+func (r *ItemRepository) FindWithPictures(ctx context.Context, auctionId string) ([]domain.ItemPicture, error) {
 
 	q := `select it.id, it.description, it.auction_id, itp.download_link 
 		  from items it
@@ -84,17 +68,27 @@ func (r *ItemRepository) FindWithPictures(ctx context.Context, auctionId string)
 	}
 
 	var itemPictureDB ItemPictureDB
-	var response []domain.ItemPictureResponse
+	var response []domain.ItemPicture
 
 	for row.Next() {
 		if err = row.Scan(&itemPictureDB.ID, *&itemPictureDB, &itemPictureDB.AuctionID, &itemPictureDB.DownloadLink); err != nil {
 			return nil, fmt.Errorf("ItemRepository.FindWithPictures %w", err)
 		}
-		response = append(response, toItemResponse(itemPictureDB))
+		response = append(response, toItemPicture(itemPictureDB))
 	}
 
 	return response, nil
 }
+
+func (r *ItemRepository) CreateItemPicture(ctx context.Context, picture domain.ItemPicture) error {
+	if _, err := r.db.ExecContext(ctx, "insert into item_pictures (id, item_id, download_url) values (?, ?, ?)",
+		picture.ID, picture.ItemID, picture.DownloadUrl); err != nil {
+		return fmt.Errorf("ItemRepository.CreateItemPicture %w", err)
+	}
+
+	return nil
+}
+
 func (r *ItemRepository) Update(ctx context.Context, request domain.ItemRequest) error {
 	tx, err := r.db.Begin()
 
@@ -112,15 +106,15 @@ func (r *ItemRepository) Update(ctx context.Context, request domain.ItemRequest)
 		tx.QueryContext(ctx, `update items set name = $1 where id = $2`, request.Description, request.ID)
 	}
 
-	if len(request.Pictures) > 0 {
+	/*	if len(request.Pictures) > 0 {
 		pictureStatement, err := tx.Prepare(`update items set download_link = $1 where id = $2`)
 		if err != nil {
 			return fmt.Errorf("ItemRepository.FindWithPictures %w", err)
 		}
 		for _, picture := range request.Pictures {
-			pictureStatement.ExecContext(ctx, picture.DownloadLink, picture.ID)
+			pictureStatement.ExecContext(ctx, picture, picture)
 		}
-	}
+	}*/
 
 	if err = tx.Commit(); err != nil {
 		return fmt.Errorf("ItemRepository.FindWithPictures %w", err)
@@ -143,11 +137,6 @@ func (r *ItemRepository) Create(ctx context.Context, item domain.ItemRequest) er
 	if _, err := tx.ExecContext(ctx, q, item.ID, item.Description, item.AuctionID); err != nil {
 		return fmt.Errorf("ItemRepository.Create %w", err)
 	}
-	//items pictures insert
-	pictuersQ := prepareInsertItemsPictures(item.Pictures)
-	if _, err = tx.ExecContext(ctx, pictuersQ, item.ID, item.Description, item.AuctionID); err != nil {
-		return fmt.Errorf("ItemRepository.Create %w", err)
-	}
 
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("ItemRepository.Create %w", err)
@@ -156,23 +145,25 @@ func (r *ItemRepository) Create(ctx context.Context, item domain.ItemRequest) er
 	return nil
 }
 
-func prepareInsertItemsPictures(itemPictures []domain.ItemPicture) string {
-	var values []interface{}
-	var placeHolders []string
-	//q := `insert into items_pictures (id, item_id, downloaLink) values `
+/*
+	func prepareInsertItemsPictures(itemPictures []domain.ItemPicture) string {
+		var values []interface{}
+		var placeHolders []string
+		//q := `insert into items_pictures (id, item_id, downloaLink) values `
 
-	for i, item := range itemPictures {
-		placeholder := fmt.Sprintf("($%d, $%d, $%d)", i*3+1, i*3+2, i*3+3)
-		placeHolders = append(placeHolders, placeholder)
-		values = append(values, item.ID, item.ItemID, item.DownloadLink)
-	}
+		for i, item := range itemPictures {
+			placeholder := fmt.Sprintf("($%d, $%d, $%d)", i*3+1, i*3+2, i*3+3)
+			placeHolders = append(placeHolders, placeholder)
+			values = append(values, item.ID, item.ItemID, item.DownloadUrl)
+		}
 
-	query := fmt.Sprintf("INSERT INTO items_picture (id, item_id, download_link) VALUES %s",
-		strings.Join(placeHolders, ", "))
+		query := fmt.Sprintf("INSERT INTO items_picture (id, item_id, download_link) VALUES %s",
+			strings.Join(placeHolders, ", "))
 
-	return query
+		return query
 
 }
+*/
 func (r *ItemRepository) Delete(ctx context.Context, id string) error {
 	q := `delete from items where id = ?`
 	if _, err := r.db.ExecContext(ctx, q, id); err != nil {
@@ -209,7 +200,7 @@ func (r *ItemRepository) FindByAuctionId(ctx context.Context, auctionId string) 
 	return result, nil
 }
 
-func (r *ItemRepository) CreateBulk(ctx context.Context, request []domain.ItemRequest) error {
+func (r *ItemRepository) CreateBulk(ctx context.Context, request []domain.Item) error {
 	tx, err := r.db.Begin()
 
 	if err != nil {
@@ -235,22 +226,6 @@ func (r *ItemRepository) CreateBulk(ctx context.Context, request []domain.ItemRe
 	if err != nil {
 		return fmt.Errorf("ItemRepository.CreateBulk failed to insert items: %w", err)
 	}
-
-	//item picture insert
-	var itemPictureValues []interface{}
-	placeHolders = []string{}
-
-	for _, item := range request {
-		for _, picture := range item.Pictures {
-			placeHolders = append(placeHolders, "(?, ?, ?)")
-			itemPictureValues = append(itemPictureValues, picture.ID, picture.ItemID, picture.DownloadLink)
-		}
-	}
-
-	query := fmt.Sprintf("INSERT INTO item_pictures (id, item_id, download_link) VALUES %s",
-		strings.Join(placeHolders, ","))
-
-	tx.ExecContext(ctx, query, itemPictureValues)
 
 	if err = tx.Commit(); err != nil {
 		return fmt.Errorf("ItemRepository.CreateBulk %w", err)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"testing"
+	"time"
 
 	"github.com/ireuven89/auctions/auction-service/domain"
 	"github.com/ireuven89/auctions/auction-service/internal/mocks"
@@ -60,6 +61,7 @@ func TestCreateAuction(t *testing.T) {
 
 	// Alternative: More flexible context matching
 	mockRepo.On("Create", mock.Anything, mock.AnythingOfType("domain.AuctionRequest")).Return(nil)
+	itemMockRepo.On("CreateBulk", mock.Anything, mock.AnythingOfType("[]domain.ItemRequest")).Return(nil)
 
 	id, err := svc.Create(context.Background(), req)
 
@@ -91,8 +93,8 @@ func TestUpdateAuction(t *testing.T) {
 	logger := zap.NewNop()
 	svc := service.NewService(mockRepo, itemMockRepo, logger)
 
-	req := domain.AuctionRequest{ID: uuid.New().String(), Description: "Updated Auction"}
-	mockRepo.On("Update", mock.Anything, req).Return(nil)
+	req := domain.AuctionRequest{ID: uuid.New().String(), Description: "Updated Auction", UpdatedAt: time.Time{}}
+	mockRepo.On("Update", mock.AnythingOfType("domain.AuctionRequest"), req).Return(nil)
 
 	err := svc.Update(context.Background(), req)
 

@@ -18,7 +18,7 @@ type AuctionDB struct {
 	ID           string    `db:"id"`
 	Description  string    `db:"description"`
 	Regions      []byte    `db:"regions"`
-	InitialOffer int64     `db:"initial_offer"`
+	InitialOffer float64   `db:"initial_offer"`
 	CurrentBid   float64   `db:"current_highest"`
 	Status       string    `db:"status"`
 	CreatedAt    time.Time `db:"created_at"`
@@ -82,7 +82,7 @@ func (r *AuctionRepository) Find(ctx context.Context, id string) (domain.Auction
 func (r *AuctionRepository) FindAll(ctx context.Context, request domain.AuctionRequest) ([]domain.Auction, error) {
 	var result []domain.Auction
 	whereParams := prepareSearchQuery(request)
-	q := fmt.Sprintf("SELECT id, name, description, regions, status, initalOffer, created_at, updatead_at from auctions where %s", whereParams)
+	q := fmt.Sprintf("SELECT id, description, regions, status, initalOffer, created_at, updatead_at from auctions where %s", whereParams)
 
 	r.logger.Debug("AuctionRepository.FindAll", zap.String("query", q))
 
@@ -109,7 +109,7 @@ func prepareSearchQuery(request domain.AuctionRequest) string {
 	var where strings.Builder
 
 	if request.Description != "" {
-		where.WriteString(fmt.Sprintf("name LIKE '%%%s%%'", request.Description))
+		where.WriteString(fmt.Sprintf("description LIKE '%%%s%%'", request.Description))
 	}
 
 	return where.String()

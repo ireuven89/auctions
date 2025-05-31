@@ -2,7 +2,6 @@ package mocks
 
 import (
 	"context"
-
 	"github.com/ireuven89/auctions/auction-service/domain"
 	"github.com/stretchr/testify/mock"
 )
@@ -14,6 +13,7 @@ type MockAuctionService struct {
 	DeleteFunc     func(ctx context.Context, id string) error
 	DeleteManyFunc func(ctx context.Context, ids []string) error
 	SearchFunc     func(ctx context.Context, request domain.AuctionRequest) ([]domain.Auction, error)
+	PlaceBidFunc   func(ctx context.Context, bid domain.PlaceBidRequest) error
 }
 
 func (m *MockAuctionService) Fetch(ctx context.Context, id string) (*domain.Auction, error) {
@@ -40,6 +40,10 @@ func (m *MockAuctionService) Search(ctx context.Context, request domain.AuctionR
 	return m.SearchFunc(ctx, request)
 }
 
+func (m *MockAuctionService) PlaceBid(ctx context.Context, bid domain.PlaceBidRequest) error {
+	return m.PlaceBidFunc(ctx, bid)
+}
+
 type ItemRepositoryMock struct {
 	mock.Mock
 }
@@ -49,9 +53,9 @@ func (m *ItemRepositoryMock) Find(ctx context.Context, id string) (domain.Item, 
 	return args.Get(0).(domain.Item), args.Error(1)
 }
 
-func (m *ItemRepositoryMock) FindWithPictures(ctx context.Context, auctionId string) ([]domain.ItemPictureResponse, error) {
+func (m *ItemRepositoryMock) FindWithPictures(ctx context.Context, auctionId string) ([]domain.ItemPicture, error) {
 	args := m.Called(ctx, auctionId)
-	return args.Get(0).([]domain.ItemPictureResponse), args.Error(1)
+	return args.Get(0).([]domain.ItemPicture), args.Error(1)
 }
 
 func (m *ItemRepositoryMock) Update(ctx context.Context, item domain.ItemRequest) error {
@@ -82,4 +86,10 @@ func (m *ItemRepositoryMock) DeleteMany(ctx context.Context, ids []interface{}) 
 func (m *ItemRepositoryMock) FindByAuctionId(ctx context.Context, auctionId string) ([]domain.Item, error) {
 	args := m.Called(ctx, auctionId)
 	return args.Get(0).([]domain.Item), args.Error(1)
+}
+
+func (m *ItemRepositoryMock) CreateItemPicture(ctx context.Context, picture domain.ItemPicture) error {
+	args := m.Called(picture)
+
+	return args.Error(0)
 }

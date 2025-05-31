@@ -18,7 +18,7 @@ import (
 func TestGetAuction(t *testing.T) {
 	s := &mocks.MockAuctionService{
 		FetchFunc: func(ctx context.Context, id string) (*domain.Auction, error) {
-			return &domain.Auction{ID: id, Name: "Test Auction"}, nil
+			return &domain.Auction{ID: id, Description: "Test Auction"}, nil
 		},
 	}
 	r := httprouter.New()

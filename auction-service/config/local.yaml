@@ -7,6 +7,11 @@ database:
 server:
   port: "8090"
 
+aws:
+  s3_buckets:
+    primary: "item_pictures"
+  region: "us-east-1"
+
 
 redis:
   port: 6379

@@ -15,7 +15,7 @@ func TestMakeEndpointGetAuction(t *testing.T) {
 	mockService := &mocks.MockAuctionService{
 		FetchFunc: func(ctx context.Context, id string) (*domain.Auction, error) {
 			if id == "123" {
-				return &domain.Auction{ID: "123", Name: "Test Auction"}, nil
+				return &domain.Auction{ID: "123", Description: "Test Auction"}, nil
 			}
 			return &domain.Auction{}, fmt.Errorf("not found")
 		},

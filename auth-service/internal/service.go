@@ -23,6 +23,11 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+const (
+	bucketName = "your-bucket-name"
+	region     = "your-region"
+)
+
 type Service interface {
 	SignToken(ctx context.Context, user user.User) (string, error)
 	Login(ctx context.Context, userIdentifier, password string) (*key.Token, error)
