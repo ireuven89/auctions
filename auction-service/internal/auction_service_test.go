@@ -93,8 +93,8 @@ func TestUpdateAuction(t *testing.T) {
 	logger := zap.NewNop()
 	svc := service.NewService(mockRepo, itemMockRepo, logger)
 
-	req := domain.AuctionRequest{ID: uuid.New().String(), Description: "Updated Auction", UpdatedAt: time.Time{}}
-	mockRepo.On("Update", mock.AnythingOfType("domain.AuctionRequest"), req).Return(nil)
+	req := domain.AuctionRequest{ID: uuid.New().String(), Description: "Updated Auction", CreatedAt: time.Time{}, UpdatedAt: time.Time{}}
+	mockRepo.On("Update", context.Background(), mock.AnythingOfType("domain.AuctionRequest")).Return(nil)
 
 	err := svc.Update(context.Background(), req)
 
