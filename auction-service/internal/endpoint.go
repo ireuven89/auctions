@@ -3,9 +3,10 @@ package internal
 import (
 	"context"
 	"fmt"
+	"mime/multipart"
+
 	"github.com/ireuven89/auctions/auction-service/domain"
 	"github.com/ireuven89/auctions/auction-service/internal/service"
-	"mime/multipart"
 
 	"github.com/go-kit/kit/endpoint"
 )
@@ -126,7 +127,7 @@ func MakeEndpointDeleteAuction(s service.Service) endpoint.Endpoint {
 		err = s.Delete(ctx, req.id)
 
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("MakeEndpointDeleteAuction %w", err)
 		}
 
 		return nil, nil

@@ -5,16 +5,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/ireuven89/auctions/auction-service/domain"
-	"github.com/ireuven89/auctions/auction-service/internal/service"
 	"log"
 	"net/http"
+
+	"github.com/ireuven89/auctions/auction-service/domain"
+	"github.com/ireuven89/auctions/auction-service/internal/service"
 
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/julienschmidt/httprouter"
 )
-
-var errNotFound = errors.New("not found")
 
 func NewTransport(s service.Service, router *httprouter.Router) Transport {
 
@@ -88,59 +87,19 @@ func RegisterRoutes(router *httprouter.Router, s service.Service) {
 	)
 
 	AuctionItemsPicturesHandler := kithttp.NewServer(
-		MakeEndpointCreateAuctionItems(s),
+		MakeEndpointCreateAuctionItemPictures(s),
 		decodeCreateItemPicturesRequest,
 		kithttp.EncodeJSONResponse,
 		kithttp.ServerErrorEncoder(errorEncoder),
 	)
-	/*
-		deleteAuctionsHandler := kithttp.NewServer(
-			MakeEndpointDeleteAuctions(s),
-			decodeDeleteAuctionsRequest,
-			kithttp.EncodeJSONResponse,
-			kithttp.ServerErrorEncoder(errorEncoder),
-		)
-
-		getAuctionItemsHandler := kithttp.NewServer(
-			MakeEndpointDeleteAuctions(s),
-			decodeDeleteAuctionsRequest,
-			kithttp.EncodeJSONResponse,
-			kithttp.ServerErrorEncoder(errorEncoder),
-		)
-
-		createAuctionItemsHandler := kithttp.NewServer(
-			MakeEndpointDeleteAuctions(s),
-			decodeDeleteAuctionsRequest,
-			kithttp.EncodeJSONResponse,
-			kithttp.ServerErrorEncoder(errorEncoder),
-		)
-
-		updateAuctionItemHandler := kithttp.NewServer(
-			MakeEndpointDeleteAuctions(s),
-			decodeDeleteAuctionsRequest,
-			kithttp.EncodeJSONResponse,
-			kithttp.ServerErrorEncoder(errorEncoder),
-		)
-
-		updateAuctionItemHandler := kithttp.NewServer(
-			MakeEndpointDeleteAuctions(s),
-			decodeDeleteAuctionsRequest,
-			kithttp.EncodeJSONResponse,
-			kithttp.ServerErrorEncoder(errorEncoder),
-		)*/
 
 	router.Handler(http.MethodGet, "/auctions/:id", getAuctionHandler)
 	router.Handler(http.MethodGet, "/auctions", getAuctionsHandler)
 	router.Handler(http.MethodPost, "/auctions", createAuctionHandler)
 	router.Handler(http.MethodPut, "/auctions/:id", updateAuctionHandler)
 	router.Handler(http.MethodDelete, "/auctions/:id", deleteAuctionHandler)
-	router.Handler(http.MethodPost, "/auctions/items", auctionItemsHandler)
-	router.Handler(http.MethodPost, "auctions/:id/item/:id/pictures", AuctionItemsPicturesHandler)
-	/*	router.Handler(http.MethodDelete, "/auctions", deleteAuctionsHandler)
-
-		router.Handler(http.MethodGet, "/auctions/:id/items", getAuctionItemsHandler)
-		router.Handler(http.MethodPost, "/auctions/:id/items", createAuctionItemsHandler)
-		router.Handler(http.MethodPut, "/auctions/:id/items/:item_id", updateAuctionItemHandler)*/
+	router.Handler(http.MethodPost, "/auctions/:id/items", auctionItemsHandler)
+	router.Handler(http.MethodPost, "/auctions/:id/items/:itemId/pictures", AuctionItemsPicturesHandler)
 
 }
 
@@ -196,12 +155,6 @@ func decodeCreateAuctionRequest(c context.Context, r *http.Request) (interface{}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		fmt.Printf("decodeCreateAuctionRequest failed decoding request %v", err)
 		return nil, fmt.Errorf("decodeCreateAuctionRequest failed casting request %w", err)
-	}
-	r.ParseMultipartForm(10 << 20)
-	files := r.MultipartForm.File["images"]
-
-	if len(files) > 5 {
-		return nil, fmt.Errorf("decodeCreateAuctionRequest images upload is restircted to 5 images")
 	}
 
 	return req, nil
@@ -275,6 +228,8 @@ func errorEncoder(_ context.Context, err error, w http.ResponseWriter) {
 	switch {
 	case errors.Is(err, domain.ErrNotFound):
 		w.WriteHeader(http.StatusNotFound)
+	case errors.Is(err, domain.ErrTooManyRequests):
+		w.WriteHeader(http.StatusTooManyRequests)
 	default:
 		w.WriteHeader(http.StatusInternalServerError)
 	}

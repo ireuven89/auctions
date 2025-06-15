@@ -4,9 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
+
 	"github.com/ireuven89/auctions/auction-service/domain"
 	"go.uber.org/zap"
-	"strings"
 )
 
 type ItemPictureDB struct {

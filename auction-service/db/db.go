@@ -48,14 +48,14 @@ func MustNewDB(host, user, password string, port int) (*sql.DB, error) {
 		if err != nil {
 			fmt.Printf("failed connecting db %v with databse name attempt %d", err, attempt)
 			attempt++
-			return nil, err
+			return nil, fmt.Errorf("failed opening db %w", err)
 		}
 
 		return db, nil
 	})
 
 	if err = migrate(db); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed migrating %w", err)
 	}
 
 	return db, nil
@@ -87,7 +87,7 @@ func migrate(db *sql.DB) error {
 	})
 
 	if err != nil {
-		return err
+		return fmt.Errorf("migrate %w", err)
 	}
 
 	return nil

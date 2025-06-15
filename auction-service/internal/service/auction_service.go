@@ -4,14 +4,15 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	aws_config "github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/ireuven89/auctions/auction-service/domain"
-	"github.com/ireuven89/auctions/shared/config"
 	"mime/multipart"
 	"os"
 	"sync"
 	"time"
+
+	aws_config "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/ireuven89/auctions/auction-service/domain"
+	"github.com/ireuven89/auctions/shared/config"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -138,20 +139,6 @@ func (s *AuctionService) Create(ctx context.Context, auction domain.AuctionReque
 		return "", fmt.Errorf("AuctionService.Create failed creating %w", err)
 	}
 
-	var itemPicturesToSave []domain.ItemPicture
-	var pictureFiles []*os.File
-
-	for _, i := range auction.Items {
-		i.ID = generateID()
-		downloadUrls, err := s.uploadItemImagesToS3(ctx, pictureFiles, i.ID)
-		if err != nil {
-			return "", fmt.Errorf("AuctionService.Create %w", err)
-		}
-		for index, _ := range i.Pictures {
-			itemPicturesToSave = append(itemPicturesToSave, domain.ItemPicture{ID: generateID(), ItemID: i.ID, DownloadUrl: downloadUrls[index]})
-		}
-	}
-
 	return auction.ID, nil
 }
 
@@ -254,20 +241,21 @@ func (s *AuctionService) PlaceBid(ctx context.Context, req domain.PlaceBidReques
 	})
 }
 
-func (s *AuctionService) ExecuteInTransaction(context.Context, func(txCtx context.Context) error) error {
+func (s *AuctionService) ExecuteInTransaction(ctx context.Context, txFunc func(txCtx context.Context) error) error {
+
 	return nil
 }
 
 func (s *AuctionService) validateAuctionForBidding(auction domain.Auction) error {
 
 	if auction.Status != domain.Active {
-		return fmt.Errorf("AuctionService.validateAuctionForBidding failed")
+		return fmt.Errorf("AuctionService.validateAuctionForBidding auction %s is past due bidding", auction.ID)
 	}
 
 	return nil
 }
 
-// ✅ PURE BUSINESS VALIDATION - No Database Calls
+// ✅ PURE BUSINESS VALIDATION
 func (s *AuctionService) validateBidAmount(amount float64, auction *domain.Auction) error {
 	minRequired := auction.CurrentBid + auction.MinIncrement
 	if amount < minRequired {

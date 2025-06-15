@@ -164,11 +164,11 @@ func buildUpdateQuery(auction domain.AuctionRequest) (string, []interface{}, err
 }
 
 func (r *AuctionRepository) Create(ctx context.Context, auction domain.AuctionRequest) error {
-	q := "insert into auctions (id, description, regions, status, inital_offer, created_at, updated_at) values(?, ?, ?, ?, ?, ?, ?, ?)"
+	q := "insert into auctions (id, description, seller_id, regions, status, initial_offer, created_at, updated_at) values(?, ?, ?, ?, ?, ?, ?, ?)"
 
 	r.logger.Debug("AuctionRepository.Create", zap.String("query", q), zap.Any("args", auction))
 
-	_, err := r.db.ExecContext(ctx, q, auction.ID, auction.Description, auction.Regions, auction.Status, auction.InitialOffer)
+	_, err := r.db.ExecContext(ctx, q, auction.ID, auction.Description, auction.SellerId, auction.Regions, auction.Status, auction.InitialOffer, auction.CreatedAt, auction.UpdatedAt)
 
 	if err != nil {
 		r.logger.Error("AuctionRepository.Create failed to insert ", zap.Error(err))

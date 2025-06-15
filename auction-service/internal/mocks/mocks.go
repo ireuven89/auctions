@@ -2,18 +2,26 @@ package mocks
 
 import (
 	"context"
+	"mime/multipart"
+
 	"github.com/ireuven89/auctions/auction-service/domain"
 	"github.com/stretchr/testify/mock"
 )
 
 type MockAuctionService struct {
-	FetchFunc      func(ctx context.Context, id string) (*domain.Auction, error)
-	CreateFunc     func(ctx context.Context, auction domain.AuctionRequest) (string, error)
-	UpdateFunc     func(ctx context.Context, auction2 domain.AuctionRequest) error
-	DeleteFunc     func(ctx context.Context, id string) error
-	DeleteManyFunc func(ctx context.Context, ids []string) error
-	SearchFunc     func(ctx context.Context, request domain.AuctionRequest) ([]domain.Auction, error)
-	PlaceBidFunc   func(ctx context.Context, bid domain.PlaceBidRequest) error
+	FetchFunc                 func(ctx context.Context, id string) (*domain.Auction, error)
+	CreateFunc                func(ctx context.Context, auction domain.AuctionRequest) (string, error)
+	UpdateFunc                func(ctx context.Context, auction2 domain.AuctionRequest) error
+	DeleteFunc                func(ctx context.Context, id string) error
+	DeleteManyFunc            func(ctx context.Context, ids []string) error
+	SearchFunc                func(ctx context.Context, request domain.AuctionRequest) ([]domain.Auction, error)
+	CreateAuctionItemsFunc    func(ctx context.Context, itemId string, items []domain.Item) error
+	CreateAuctionPicturesFunc func(ctx context.Context, id string, request []*multipart.FileHeader) error
+	PlaceBidFunc              func(ctx context.Context, bid domain.PlaceBidRequest) error
+}
+
+func (m *MockAuctionService) CreateAuctionPictures(ctx context.Context, id string, request []*multipart.FileHeader) error {
+	return m.CreateAuctionPicturesFunc(ctx, id, request)
 }
 
 func (m *MockAuctionService) Fetch(ctx context.Context, id string) (*domain.Auction, error) {
@@ -44,6 +52,10 @@ func (m *MockAuctionService) PlaceBid(ctx context.Context, bid domain.PlaceBidRe
 	return m.PlaceBidFunc(ctx, bid)
 }
 
+func (m *MockAuctionService) CreateAuctionItems(ctx context.Context, itemId string, items []domain.Item) error {
+	return m.CreateAuctionItemsFunc(ctx, itemId, items)
+}
+
 type ItemRepositoryMock struct {
 	mock.Mock
 }
@@ -68,7 +80,7 @@ func (m *ItemRepositoryMock) Create(ctx context.Context, item domain.ItemRequest
 	return args.Error(0)
 }
 
-func (m *ItemRepositoryMock) CreateBulk(ctx context.Context, items []domain.ItemRequest) error {
+func (m *ItemRepositoryMock) CreateBulk(ctx context.Context, items []domain.Item) error {
 	args := m.Called(ctx, items)
 	return args.Error(0)
 }

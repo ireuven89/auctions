@@ -29,10 +29,11 @@ type AuctionRequest struct {
 	CurrentBid   float64         `json:"currentBid"`
 	CreatedAt    time.Time       `json:"created_at"`
 	UpdatedAt    time.Time       `json:"updated_at"`
-	Items        []ItemRequest   `json:"items"`
+	//	Items        []ItemRequest   `json:"items"`
 }
 
 var ErrNotFound = errors.New("resource not found")
+var ErrTooManyRequests = errors.New("too many requests")
 
 type AuctionStatus int
 

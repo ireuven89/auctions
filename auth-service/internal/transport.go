@@ -63,8 +63,8 @@ func RegisterRoutes(router *httprouter.Router, s Service) {
 
 	logoutHandler := kithttp.NewServer(
 		MakeEndpointLogout(s),
-		decodeRegisterUserRequest,
-		encodeRegisterUserResponse,
+		decodeLogoutRequest,
+		encodeLogoutUserResponse,
 		kithttp.ServerErrorEncoder(errorEncoder),
 	)
 
@@ -79,7 +79,7 @@ func RegisterRoutes(router *httprouter.Router, s Service) {
 	router.Handler(http.MethodPost, "/auth/login", loginHandler)
 	router.Handler(http.MethodPost, "/auth/refresh", refreshHandler)
 	router.Handler(http.MethodPost, "/auth/logout", logoutHandler)
-	router.Handler(http.MethodGet, "/auth/publicKey", publicKeyHandler)
+	router.Handler(http.MethodGet, "/auth/jwks", publicKeyHandler)
 }
 
 func decodeRegisterUserRequest(ctx context.Context, r *http.Request) (interface{}, error) {
@@ -221,9 +221,10 @@ func errorEncoder(ctx context.Context, err error, w http.ResponseWriter) {
 	case errors.Is(err, key.ErrInvalidToken),
 		errors.Is(err, key.ErrExpiredToken):
 		w.WriteHeader(http.StatusUnauthorized) // 401
-
+	case errors.Is(err, key.ErrTooManyRequests):
+		w.WriteHeader(http.StatusTooManyRequests) //429
 	default:
-		w.WriteHeader(http.StatusInternalServerError)
+		w.WriteHeader(http.StatusInternalServerError) //500
 	}
 	_ = json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 

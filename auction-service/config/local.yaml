@@ -6,7 +6,7 @@ database:
 
 server:
   port: "8090"
-
+  secret: "auth_public_key"
 aws:
   s3_buckets:
     primary: "item_pictures"
