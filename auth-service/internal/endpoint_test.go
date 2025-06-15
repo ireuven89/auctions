@@ -3,11 +3,12 @@ package internal
 import (
 	"context"
 	"errors"
+	"testing"
+
 	"github.com/ireuven89/auctions/auth-service/internal/mocks"
 	"github.com/ireuven89/auctions/auth-service/key"
 	user2 "github.com/ireuven89/auctions/auth-service/user"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 // GET PUBLIC KEY

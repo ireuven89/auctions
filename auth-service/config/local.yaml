@@ -6,7 +6,10 @@ database:
   host: "localhost"
   user: "root"
   password: "admin"
-
+aws:
+  bucket: "bucket_name"
+  region: "region"
+  secret: "auth_public_key"
 redis:
   port: 6379
   host: "localhost:6379"

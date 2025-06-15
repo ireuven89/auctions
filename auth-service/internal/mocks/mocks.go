@@ -2,8 +2,9 @@ package mocks
 
 import (
 	"context"
-	"github.com/ireuven89/auctions/auth-service/key"
 	"time"
+
+	"github.com/ireuven89/auctions/auth-service/key"
 
 	"github.com/ireuven89/auctions/auth-service/user"
 )
@@ -15,6 +16,11 @@ type MockRepo struct {
 	FindUserByCredentialsFunc func(ctx context.Context, identifier string) (*user.User, error)
 	GetTokenFunc              func(ctx context.Context, token string) (string, error)
 	SaveRefreshTokenFunc      func(ctx context.Context, token string, userId string, ttl time.Duration) error
+	GetRefreshRateFunc        func(ctx context.Context, token string) (int, error)
+}
+
+func (m *MockRepo) GetRefreshRate(ctx context.Context, token string) (int, error) {
+	return m.GetRefreshRateFunc(ctx, token)
 }
 
 func (m *MockRepo) FindUser(ctx context.Context, id string) (*user.User, error) {
