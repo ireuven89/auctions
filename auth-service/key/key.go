@@ -21,6 +21,7 @@ type Token struct {
 var (
 	ErrUserNotFound       = errors.New("user not found or credentials missing")
 	ErrInvalidCredentials = errors.New("invalid credentials")
+	ErrTooManyRequests    = errors.New("too many requests")
 )
 
 // Authorization errors (token required)

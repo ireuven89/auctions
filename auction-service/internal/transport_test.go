@@ -8,7 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/ireuven89/auctions/auction-service/auction"
+	"github.com/ireuven89/auctions/auction-service/domain"
+
 	"github.com/ireuven89/auctions/auction-service/internal/mocks"
 	"github.com/julienschmidt/httprouter"
 	"github.com/stretchr/testify/assert"
@@ -16,8 +17,8 @@ import (
 
 func TestGetAuction(t *testing.T) {
 	s := &mocks.MockAuctionService{
-		FetchFunc: func(ctx context.Context, id string) (*auction.Auction, error) {
-			return &auction.Auction{ID: id, Name: "Test Auction"}, nil
+		FetchFunc: func(ctx context.Context, id string) (*domain.Auction, error) {
+			return &domain.Auction{ID: id, Description: "Test Auction"}, nil
 		},
 	}
 	r := httprouter.New()
@@ -33,7 +34,7 @@ func TestGetAuction(t *testing.T) {
 
 func TestCreateAuctionTransport(t *testing.T) {
 	s := &mocks.MockAuctionService{
-		CreateFunc: func(ctx context.Context, a auction.AuctionRequest) (string, error) {
+		CreateFunc: func(ctx context.Context, a domain.AuctionRequest) (string, error) {
 			return "created-id", nil
 		},
 	}
@@ -56,7 +57,7 @@ func TestCreateAuctionTransport(t *testing.T) {
 
 func TestUpdateAuctionTransport(t *testing.T) {
 	s := &mocks.MockAuctionService{
-		UpdateFunc: func(ctx context.Context, a auction.AuctionRequest) error {
+		UpdateFunc: func(ctx context.Context, a domain.AuctionRequest) error {
 			return nil
 		},
 	}
@@ -93,7 +94,7 @@ func TestDeleteAuctionTransport(t *testing.T) {
 
 func TestSearchAuctionTransport(t *testing.T) {
 	s := &mocks.MockAuctionService{
-		SearchFunc: func(ctx context.Context, req auction.AuctionRequest) ([]auction.Auction, error) {
+		SearchFunc: func(ctx context.Context, req domain.AuctionRequest) ([]domain.Auction, error) {
 			return nil, nil
 		},
 	}

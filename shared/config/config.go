@@ -14,6 +14,7 @@ type Config struct {
 	Sql    DBConfig     `mapstructure:"database"`
 	Redis  DBConfig     `mapstructure:"redis"`
 	Server ServerConfig `mapstructure:"server"`
+	AWS    AWSConfig    `mapstructure:"aws"`
 }
 
 type ServerConfig struct {
@@ -25,6 +26,13 @@ type DBConfig struct {
 	User     string `mapstructure:"user"`
 	Password string `mapstructure:"password"`
 	Port     int    `mapstructure:"port"`
+}
+
+type AWSConfig struct {
+	S3Buckets struct {
+		Primary string `mapstructure:"primary"`
+	} `mapstructure:"s3_buckets"`
+	S3Region string
 }
 
 const defaultConfigDir = "/config"
