@@ -9,7 +9,7 @@ server:
 
 
 redis:
-  port: 6379
+  port: 63710
   host: "localhost"
   user: "admin"
   password: "${REDIS_PASSWORD}"

@@ -5,10 +5,12 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/ireuven89/auctions/auction-service/auction"
 	"github.com/ireuven89/auctions/auction-service/db"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
 
@@ -16,21 +18,29 @@ type Service interface {
 	Fetch(ctx context.Context, id string) (*auction.Auction, error)
 	Search(ctx context.Context, request auction.AuctionRequest) ([]auction.Auction, error)
 	Update(ctx context.Context, auction auction.AuctionRequest) error
+	Activate(ctx context.Context, auction auction.AuctionRequest) error
 	Create(ctx context.Context, auction auction.AuctionRequest) (string, error)
 	Delete(ctx context.Context, id string) error
 	DeleteMany(ctx context.Context, ids []string) error
 }
 
+var (
+	activeAuctionsQueue    = "active_auctions"
+	expired_auctions_queue = "expired_auctions"
+)
+
 type AuctionService struct {
 	repo   db.Repository
+	redis  *redis.Client
 	logger *zap.Logger
 }
 
-func NewService(repo db.Repository, logger *zap.Logger) Service {
+func NewService(repo db.Repository, redisConn *redis.Client, logger *zap.Logger) Service {
 
 	return &AuctionService{
 		logger: logger,
 		repo:   repo,
+		redis:  redisConn,
 	}
 }
 
@@ -75,6 +85,8 @@ func (s *AuctionService) Create(ctx context.Context, auction auction.AuctionRequ
 	}
 
 	auction.ID = generateID()
+	auction.CreatedAt = time.Now().Unix()
+	auction.UpdatedAt = time.Now().Unix()
 
 	if err := s.repo.Create(ctx, auction); err != nil {
 		s.logger.Error("AuctionService.Failed to create auction ", zap.Error(err))
@@ -85,8 +97,15 @@ func (s *AuctionService) Create(ctx context.Context, auction auction.AuctionRequ
 }
 
 func validateAuction(auction auction.AuctionRequest) error {
-	if auction.Item == "" {
-		return fmt.Errorf("AuctionService.ValidateAuction failed invalid auction item")
+	if auction.Description == "" {
+		return fmt.Errorf("AuctionService.ValidateAuction failed invalid auction description")
+	}
+	if auction.Name == "" {
+		return fmt.Errorf("AuctionService.ValidateAuction failed invalid auction name")
+	}
+
+	if auction.UserId == "" {
+		return fmt.Errorf("AuctionService.ValidateAuction failed invalid auction user_id")
 	}
 
 	return nil
@@ -95,6 +114,44 @@ func validateAuction(auction auction.AuctionRequest) error {
 func generateID() string {
 
 	return uuid.New().String()
+}
+
+func (s *AuctionService) Activate(ctx context.Context, auction auction.AuctionRequest) error {
+	if err := validateActivateAuction(auction); err != nil {
+		return fmt.Errorf("AuctionService.Activate failed invalid auction")
+	}
+
+	err := s.repo.WithTransactionContext(ctx, func(txRepo db.Repository) error {
+		if err := s.repo.Update(ctx, auction); err != nil {
+			return fmt.Errorf("AuctionService.Activate failed activating auction %w", err)
+		}
+
+		//publish to redis the auction
+		key := fmt.Sprintf("%s:%s", "queue", activeAuctionsQueue)
+		if err := s.redis.LPush(ctx, key, auction.ID, time.Until(time.UnixMilli(auction.EndTime))).Err(); err != nil {
+			return fmt.Errorf("AuctionService.Activate failed activating auction %w", err)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return fmt.Errorf("AuctionService.Activate failed activating auction %w", err)
+	}
+
+	return nil
+}
+
+func validateActivateAuction(auction auction.AuctionRequest) error {
+	if auction.ID == "" {
+		return fmt.Errorf("AuctionService.Activate failed invalid auction ID")
+	}
+
+	if auction.EndTime <= time.Now().Unix() {
+		return fmt.Errorf("AuctionService.Activate failed invalid auction end_time")
+	}
+
+	return nil
 }
 
 func (s *AuctionService) Delete(ctx context.Context, id string) error {

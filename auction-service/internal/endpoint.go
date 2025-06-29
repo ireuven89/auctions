@@ -110,6 +110,37 @@ func MakeEndpointUpdateAuction(s Service) endpoint.Endpoint {
 	}
 }
 
+type ActivateAuctionRequestModel struct {
+	ID       string `json:"id"`
+	Activate bool   `json:"activate"`
+	EndTime  int64  `json:"end_time"`
+}
+
+func toAuctionRequest(model ActivateAuctionRequestModel) auction.AuctionRequest {
+	return auction.AuctionRequest{
+		ID:      model.ID,
+		Active:  &model.Activate,
+		EndTime: model.EndTime,
+	}
+}
+
+func MakeEndpointActivateAuction(s Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req, ok := request.(ActivateAuctionRequestModel)
+		if !ok {
+			return nil, fmt.Errorf("MakeEndpointUpdateAuction.failed parsing request")
+		}
+
+		err = s.Activate(ctx, toAuctionRequest(req))
+
+		if err != nil {
+			return nil, fmt.Errorf("MakeEndpointUpdateAuction %w", err)
+		}
+
+		return nil, nil
+	}
+}
+
 type DeleteAuctionRequestModel struct {
 	id string
 }

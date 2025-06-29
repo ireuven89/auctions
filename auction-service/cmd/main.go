@@ -24,9 +24,15 @@ func main() {
 		panic(err)
 	}
 
+	redisConn, err := db.MustNewRedis(fmt.Sprintf("%s:%d", cfg.Redis.Host, cfg.Redis.Port), cfg.Redis.Password)
+
+	if err != nil {
+		panic(err)
+	}
+
 	router := httprouter.New()
 	repo := db.NewRepository(dbConn, logger)
-	service := internal.NewService(repo, logger)
+	service := internal.NewService(repo, redisConn, logger)
 	transport := internal.NewTransport(service, router)
 
 	transport.ListenAndServe(cfg.Server.Port)

@@ -1,8 +1,6 @@
 package db
 
 import (
-	"github.com/ireuven89/auctions/auction-service/auction"
-
 	"context"
 	"database/sql"
 	"fmt"
@@ -10,21 +8,32 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ireuven89/auctions/auction-service/auction"
+
 	"go.uber.org/zap"
 )
 
 type AuctionDB struct {
-	ID       string `db:"id"`
-	Name     string `db:"name"`
-	BidderId string `db:"bidder_id"`
+	ID          string     `db:"id"`
+	Name        string     `db:"name"`
+	Description string     `db:"description"`
+	UserId      string     `db:"user_id"`
+	Active      bool       `db:"active"`
+	EndTime     *time.Time `db:"end_time"`
+	CreatedAt   *time.Time `db:"created_at"`
+	UpdatedAt   *time.Time `db:"updated_at"`
 }
 
 func toAuction(db AuctionDB) auction.Auction {
 
 	return auction.Auction{
-		ID:       db.ID,
-		Name:     db.Name,
-		BidderId: db.BidderId,
+		ID:        db.ID,
+		Name:      db.Name,
+		UserId:    db.UserId,
+		Active:    db.Active,
+		EndTime:   db.EndTime.Unix(),
+		CreatedAt: *db.CreatedAt,
+		UpdatedAt: *db.UpdatedAt,
 	}
 }
 
@@ -32,6 +41,7 @@ type Repository interface {
 	Find(ctx context.Context, id string) (auction.Auction, error)
 	FindAll(ctx context.Context, request auction.AuctionRequest) ([]auction.Auction, error)
 	Update(ctx context.Context, auction auction.AuctionRequest) error
+	WithTransactionContext(ctx context.Context, fn func(txRepo Repository) error) error
 	Create(ctx context.Context, auction auction.AuctionRequest) error
 	Delete(ctx context.Context, id string) error
 	DeleteMany(ctx context.Context, ids []interface{}) error
@@ -40,6 +50,7 @@ type Repository interface {
 type AuctionRepository struct {
 	logger *zap.Logger
 	db     *sql.DB
+	tx     *sql.Tx
 }
 
 func NewRepository(db *sql.DB, logger *zap.Logger) Repository {
@@ -50,11 +61,34 @@ func NewRepository(db *sql.DB, logger *zap.Logger) Repository {
 	}
 }
 
+func (r *AuctionRepository) WithTransaction(tx *sql.Tx) Repository {
+	return &AuctionRepository{
+		db: r.db,
+		tx: tx,
+	}
+}
+
+func (r *AuctionRepository) WithTransactionContext(ctx context.Context, fn func(txRepo Repository) error) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+
+	txRepo := r.WithTransaction(tx)
+
+	if err = fn(txRepo); err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return nil
+}
+
 func (r *AuctionRepository) Find(ctx context.Context, id string) (auction.Auction, error) {
 	var result AuctionDB
 	start := time.Now()
 
-	q := "select id, name from auctions where id = ?"
+	q := "select id, name, description, user_id, active, end_time, created_at, updated_at from auctions where id = ?"
 
 	r.logger.Debug("AuctionRepository.Find ", zap.Any("query", q), zap.Any("args", id))
 
@@ -69,7 +103,7 @@ func (r *AuctionRepository) Find(ctx context.Context, id string) (auction.Auctio
 		return auction.Auction{}, row.Err()
 	}
 
-	if err := row.Scan(&result.ID, &result.Name); err != nil {
+	if err := row.Scan(&result.ID, &result.Name, &result.Description, &result.UserId, &result.Active, &result.EndTime, &result.CreatedAt, &result.UpdatedAt); err != nil {
 		r.logger.Error("failed getting db result", zap.Error(err))
 		return auction.Auction{}, err
 	}
@@ -78,9 +112,9 @@ func (r *AuctionRepository) Find(ctx context.Context, id string) (auction.Auctio
 }
 
 func (r *AuctionRepository) FindAll(ctx context.Context, request auction.AuctionRequest) ([]auction.Auction, error) {
-	var result []auction.Auction
+
 	whereParams := prepareSearchQuery(request)
-	q := fmt.Sprintf("SELECT id, name, bidder_id from auctions where %s", whereParams)
+	q := fmt.Sprintf("SELECT id, name, descrption, user_id, active, end_time, created_at, updated_at from auctions where %s", whereParams)
 
 	r.logger.Debug("AuctionRepository.FindAll", zap.String("query", q))
 
@@ -91,12 +125,15 @@ func (r *AuctionRepository) FindAll(ctx context.Context, request auction.Auction
 		return nil, fmt.Errorf("AuctionRepository.FindAll failed to detch results %w", err)
 	}
 
+	result := make([]auction.Auction, 0)
 	for rows.Next() {
 		var auctionDB AuctionDB
-		if err = rows.Scan(&auctionDB.ID, &auctionDB.Name, &auctionDB.BidderId); err != nil {
+		var endTime time.Time
+		if err = rows.Scan(&auctionDB.ID, &auctionDB.Name, &auctionDB.Description, &auctionDB.UserId, &auctionDB.Active, &endTime, &auctionDB.CreatedAt, &auctionDB.UpdatedAt); err != nil {
 			r.logger.Error("FindAll failed to cast results", zap.Error(err))
 			return nil, fmt.Errorf("AuctionRepository.FindAll %w", err)
 		}
+		auctionDB.EndTime = &endTime
 		result = append(result, toAuction(auctionDB))
 	}
 
@@ -143,8 +180,23 @@ func buildUpdateQuery(auction auction.AuctionRequest) (string, []interface{}, er
 		args = append(args, auction.Name)
 	}
 
+	if auction.Description != "" {
+		sets = append(sets, "description = ?")
+		args = append(args, auction.Description)
+	}
+
+	if auction.EndTime != 0 {
+		sets = append(sets, "end_time = ?")
+		args = append(args, time.UnixMilli(auction.EndTime))
+	}
+
+	if auction.Active != nil {
+		sets = append(sets, "active = ?")
+		args = append(args, *auction.Active)
+	}
+
 	if len(sets) == 0 {
-		return "", nil, fmt.Errorf("no fields to update")
+		return "", nil, fmt.Errorf("AuctionRepository.Update failed to update query")
 	}
 
 	query += strings.Join(sets, ", ") + " WHERE id = ?"
@@ -154,11 +206,18 @@ func buildUpdateQuery(auction auction.AuctionRequest) (string, []interface{}, er
 }
 
 func (r *AuctionRepository) Create(ctx context.Context, auction auction.AuctionRequest) error {
-	q := "insert into auctions (id, name, bidder_id) values(?, ?, ?)"
+	q := "insert into auctions (id, name,user_id, active, description, end_time, created_at, updated_at) values(?, ?, ?, ?, ?, ?, ?, ?)"
 
 	r.logger.Debug("AuctionRepository.Create", zap.String("query", q), zap.Any("args", auction))
 
-	_, err := r.db.ExecContext(ctx, q, auction.ID, auction.Name)
+	var endTimeStamp interface{}
+	if auction.EndTime == 0 {
+		endTimeStamp = nil
+	} else {
+		endTimeStamp = time.UnixMilli(auction.EndTime)
+	}
+
+	_, err := r.db.ExecContext(ctx, q, auction.ID, auction.Name, auction.UserId, auction.Active, auction.Description, endTimeStamp, time.UnixMilli(auction.CreatedAt), time.UnixMilli(auction.UpdatedAt))
 
 	if err != nil {
 		r.logger.Error("AuctionRepository.Create failed to insert ", zap.Error(err))

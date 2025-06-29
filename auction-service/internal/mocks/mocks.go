@@ -13,6 +13,11 @@ type MockAuctionService struct {
 	DeleteFunc     func(ctx context.Context, id string) error
 	DeleteManyFunc func(ctx context.Context, ids []string) error
 	SearchFunc     func(ctx context.Context, request auction.AuctionRequest) ([]auction.Auction, error)
+	ActivateFunc   func(ctx context.Context, auction auction.AuctionRequest) error
+}
+
+func (m *MockAuctionService) Activate(ctx context.Context, auction auction.AuctionRequest) error {
+	return m.ActivateFunc(ctx, auction)
 }
 
 func (m *MockAuctionService) Fetch(ctx context.Context, id string) (*auction.Auction, error) {

@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/ireuven89/auctions/auction-service/auction"
@@ -76,11 +77,11 @@ func TestRepo_FindAll(t *testing.T) {
 	req := auction.AuctionRequest{Name: "car"}
 
 	// The query should match the generated WHERE clause
-	expectedQuery := regexp.QuoteMeta("SELECT id, name, bidder_id from auctions where name LIKE '%car%'")
+	expectedQuery := regexp.QuoteMeta("SELECT id, name, descrption, user_id, active, end_time, created_at, updated_at from auctions where name LIKE '%car%'")
 
-	rows := sqlmock.NewRows([]string{"id", "name", "bidder_id"}).
-		AddRow("a1", "car auction", "b123").
-		AddRow("a2", "sports car auction", "b456")
+	rows := sqlmock.NewRows([]string{"id", "name", "description", "user_id", "active", "end_time", "created_at", "updated_at"}).
+		AddRow("a1", "car auction", "some-description", "some-user-id", false, time.Now(), time.Now(), time.Now()).
+		AddRow("a2", "sports car auction", "some-description", "some-user-id", false, time.Now(), time.Now(), time.Now())
 
 	mock.ExpectQuery(expectedQuery).WillReturnRows(rows)
 
@@ -90,5 +91,5 @@ func TestRepo_FindAll(t *testing.T) {
 
 	require.Equal(t, "a1", auctions[0].ID)
 	require.Equal(t, "car auction", auctions[0].Name)
-	require.Equal(t, "b123", auctions[0].BidderId)
+	require.Equal(t, "some-user-id", auctions[0].UserId)
 }

@@ -72,6 +72,13 @@ func RegisterRoutes(router *httprouter.Router, s Service) {
 		kithttp.ServerErrorEncoder(errorEncoder),
 	)
 
+	activateAuctionHandler := kithttp.NewServer(
+		MakeEndpointActivateAuction(s),
+		decodeActivateAuctionRequest,
+		kithttp.EncodeJSONResponse,
+		kithttp.ServerErrorEncoder(errorEncoder),
+	)
+
 	deleteAuctionHandler := kithttp.NewServer(
 		MakeEndpointDeleteAuction(s),
 		decodeDeleteAuctionRequest,
@@ -89,6 +96,7 @@ func RegisterRoutes(router *httprouter.Router, s Service) {
 	router.Handler(http.MethodGet, "/auctions/:id", getAuctionHandler)
 	router.Handler(http.MethodGet, "/auctions", getAuctionsHandler)
 	router.Handler(http.MethodPost, "/auctions", createAuctionHandler)
+	router.Handler(http.MethodPost, "/auctions/:id", activateAuctionHandler)
 	router.Handler(http.MethodPut, "/auctions/:id", updateAuctionHandler)
 	router.Handler(http.MethodDelete, "/auctions/:id", deleteAuctionHandler)
 	router.Handler(http.MethodDelete, "/auctions", deleteAuctionsHandler)
@@ -169,6 +177,19 @@ func decodeUpdateAuctionRequest(c context.Context, r *http.Request) (interface{}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		fmt.Printf("decodeCreateAuctionRequest failed decoding request %v", err)
 		return nil, fmt.Errorf("decodeUpdateAuctionRequest %w", err)
+	}
+
+	req.ID = httprouter.ParamsFromContext(c).ByName("id")
+
+	return req, nil
+}
+
+func decodeActivateAuctionRequest(c context.Context, r *http.Request) (interface{}, error) {
+	var req ActivateAuctionRequestModel
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		fmt.Printf("decodeActivateAuctionRequest failed decoding request %v", err)
+		return nil, fmt.Errorf("decodeActivateAuctionRequest %w", err)
 	}
 
 	req.ID = httprouter.ParamsFromContext(c).ByName("id")

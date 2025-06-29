@@ -7,6 +7,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/redis/go-redis/v9"
+
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/pressly/goose/v3"
 	"github.com/sethvargo/go-retry"
@@ -44,7 +46,7 @@ func MustNewDB(host, user, password string, port int) (*sql.DB, error) {
 			return nil, err
 		}
 
-		db, err = sql.Open("mysql", dsn+databaseName)
+		db, err = sql.Open("mysql", dsn+databaseName+"?parseTime=true")
 		if err != nil {
 			fmt.Printf("failed connecting db %v with databse name attempt %d", err, attempt)
 			attempt++
@@ -91,4 +93,19 @@ func migrate(db *sql.DB) error {
 	}
 
 	return nil
+}
+
+func MustNewRedis(host, password string) (*redis.Client, error) {
+	opts := redis.Options{
+		Addr:     host,
+		Password: password,
+	}
+
+	c := redis.NewClient(&opts)
+
+	if err := c.Ping(context.Background()).Err(); err != nil {
+		return nil, err
+	}
+
+	return c, nil
 }

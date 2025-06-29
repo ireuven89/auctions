@@ -77,6 +77,15 @@ services:
       - "6379:6379"
     networks:
       - app-net
+  redis-queue:
+    image: redis:latest
+    container_name: redis-queue
+    environment:
+      - REDIS_PASSWORD=admin
+    ports:
+      - "63710:6379"
+    networks:
+      - app-net
   auth-db:
     image: mysql:latest
     container_name: auth-db
