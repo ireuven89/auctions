@@ -19,8 +19,6 @@ type Service interface {
 	UpdateBidder(ctx context.Context, bidder bidder.Bidder) error
 }
 
-var auctions_queue = "auctions-queue"
-
 type BidderService struct {
 	repo   db.Repository
 	logger *zap.Logger

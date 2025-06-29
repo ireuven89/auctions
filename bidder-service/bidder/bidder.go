@@ -3,7 +3,7 @@ package bidder
 type Bidder struct {
 	ID   string `json:"-"`
 	Name string `json:"name"`
-	Bid  string `json:"bid"`
+	Item string `json:"item"`
 }
 
 type BiddersRequest struct {
