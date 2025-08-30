@@ -57,7 +57,6 @@ type MockAuctionRepository struct {
 	mock.Mock
 }
 
-
 func (m *MockAuctionRepository) Find(ctx context.Context, id string) (domain.Auction, error) {
 	args := m.Called(ctx, id)
 	return args.Get(0).(domain.Auction), args.Error(1)
@@ -150,7 +149,7 @@ func (m *MockItemRepository) GetItemsBuAuction(ctx context.Context, id string) (
 }
 func (m *MockItemRepository) GeItemsWByAuctionWithPictures(ctx context.Context, id string) ([]domain.Item, error) {
 
-return m.GeItemsWByAuctionWithPicturesFunc(ctx, id)
+	return m.GeItemsWByAuctionWithPicturesFunc(ctx, id)
 }
 func (m *ItemRepositoryMock) FindByAuctionId(ctx context.Context, auctionId string) ([]domain.Item, error) {
 	args := m.Called(ctx, auctionId)

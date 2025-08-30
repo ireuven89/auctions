@@ -5,11 +5,12 @@ import (
 	"context"
 	"encoding/json"
 
-	user2 "github.com/ireuven89/auctions/auth-service/user"
-	"github.com/ireuven89/auctions/shared/jwksprovider"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	user2 "github.com/ireuven89/auctions/auth-service/user"
+	"github.com/ireuven89/auctions/shared/jwksprovider"
 )
 
 func TestDecodeRegisterUserRequest_Success(t *testing.T) {

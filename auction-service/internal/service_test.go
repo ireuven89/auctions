@@ -3,8 +3,9 @@ package internal
 import (
 	"context"
 	"database/sql"
-	"github.com/ireuven89/auctions/auction-service/domain"
 	"testing"
+
+	"github.com/ireuven89/auctions/auction-service/domain"
 
 	"github.com/ireuven89/auctions/auction-service/internal/mocks"
 
@@ -21,7 +22,7 @@ func TestCreateAuction(t *testing.T) {
 	svc := NewService(mockRepo, mockitemRepo, logger)
 
 	req := domain.AuctionRequest{Description: "Test Auction"}
-	mockRepo.On("Create", mock.Anything, mock.AnythingOfType("auction.AuctionRequest")).Return(nil)
+	mockRepo.On("Create", mock.Anything, mock.AnythingOfType("domain.AuctionRequest")).Return(nil)
 
 	id, err := svc.Create(context.Background(), req)
 

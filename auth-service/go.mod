@@ -7,7 +7,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.35.4
 	github.com/go-kit/kit v0.13.0
 	github.com/go-sql-driver/mysql v1.9.2
-	github.com/golang-jwt/jwt/v5 v5.2.2
+	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/google/uuid v1.6.0
 	github.com/ireuven89/auctions/shared v0.0.0
 	github.com/julienschmidt/httprouter v1.3.0

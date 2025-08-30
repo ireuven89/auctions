@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/ireuven89/auctions/shared/jwksprovider"
 	"testing"
+
+	"github.com/ireuven89/auctions/shared/jwksprovider"
 
 	"github.com/ireuven89/auctions/auth-service/internal/mocks"
 	"github.com/ireuven89/auctions/auth-service/key"
@@ -25,7 +26,7 @@ func TestMakeEndpointGetPublicKey(t *testing.T) {
 
 	resp, err := endpoint(context.Background(), nil)
 	assert.NoError(t, err)
-	assert.Equal(t, []json.RawMessage{[]byte{'E'}}, resp.(GetPublicKeyResponse).PublicKey)
+	assert.Equal(t, jwksprovider.JWKS{[]json.RawMessage{[]byte{'E'}}}, resp.(GetPublicKeyResponse).PublicKey)
 }
 
 // REGISTER USER
