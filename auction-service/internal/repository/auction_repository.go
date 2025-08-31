@@ -17,6 +17,7 @@ import (
 type AuctionDB struct {
 	ID           string    `db:"id"`
 	Description  string    `db:"description"`
+	Category     string    `db:"category"`
 	Regions      []byte    `db:"regions"`
 	InitialOffer float64   `db:"initial_offer"`
 	CurrentBid   float64   `db:"current_highest"`
@@ -55,7 +56,7 @@ func (r *AuctionRepository) Find(ctx context.Context, id string) (domain.Auction
 	var result AuctionDB
 	start := time.Now()
 
-	q := "select id, description from auctions where id = ?"
+	q := "select id, description,category, regions,status,initial_offer  from auctions where id = ?"
 
 	r.logger.Debug("AuctionRepository.Find ", zap.Any("query", q), zap.Any("args", id))
 
@@ -70,7 +71,7 @@ func (r *AuctionRepository) Find(ctx context.Context, id string) (domain.Auction
 		return domain.Auction{}, row.Err()
 	}
 
-	if err := row.Scan(&result.ID, &result.Description); err != nil {
+	if err := row.Scan(&result.ID, &result.Description, &result.Category, &result.Regions, &result.Status, &result.InitialOffer); err != nil {
 		r.logger.Error("failed getting db result", zap.Error(err))
 		return domain.Auction{}, err
 	}
@@ -81,7 +82,7 @@ func (r *AuctionRepository) Find(ctx context.Context, id string) (domain.Auction
 func (r *AuctionRepository) FindAll(ctx context.Context, request domain.AuctionRequest) ([]domain.Auction, error) {
 	var result []domain.Auction
 	whereParams := prepareSearchQuery(request)
-	q := fmt.Sprintf("SELECT id, description, regions, status, initalOffer, created_at, updatead_at from auctions where %s", whereParams)
+	q := fmt.Sprintf("SELECT id, description, category,  regions, status, initial_offer, created_at, updated_at from auctions where %s", whereParams)
 
 	r.logger.Debug("AuctionRepository.FindAll", zap.String("query", q))
 
@@ -105,13 +106,29 @@ func (r *AuctionRepository) FindAll(ctx context.Context, request domain.AuctionR
 }
 
 func prepareSearchQuery(request domain.AuctionRequest) string {
-	var where strings.Builder
+	var conditions []string
 
 	if request.Description != "" {
-		where.WriteString(fmt.Sprintf("description LIKE '%%%s%%'", request.Description))
+		conditions = append(conditions, fmt.Sprintf("description LIKE '%%%s%%'", request.Description))
 	}
 
-	return where.String()
+	if request.Category != "" {
+		conditions = append(conditions, fmt.Sprintf("category LIKE '%%%s%%'", request.Category))
+	}
+
+	if request.Status != "" {
+		conditions = append(conditions, fmt.Sprintf("status LIKE '%%%s%%'", request.Status))
+	}
+
+	if request.Regions != nil {
+		conditions = append(conditions, fmt.Sprintf("regions in (%s)", request.Regions))
+	}
+
+	if len(conditions) == 0 {
+		return ""
+	}
+
+	return strings.Join(conditions, "AND")
 }
 
 func (r *AuctionRepository) Update(ctx context.Context, auction domain.AuctionRequest) error {
@@ -163,11 +180,11 @@ func buildUpdateQuery(auction domain.AuctionRequest) (string, []interface{}, err
 }
 
 func (r *AuctionRepository) Create(ctx context.Context, auction domain.AuctionRequest) error {
-	q := "insert into auctions (id, description, seller_id, regions, status, initial_offer, created_at, updated_at) values(?, ?, ?, ?, ?, ?, ?, ?)"
+	q := "insert into auctions (id, description, category, seller_id, regions, status, initial_offer, created_at, updated_at) values(?, ?, ?, ?, ?, ?, ?, ?, ?)"
 
 	r.logger.Debug("AuctionRepository.Create", zap.String("query", q), zap.Any("args", auction))
 
-	_, err := r.db.ExecContext(ctx, q, auction.ID, auction.Description, auction.SellerId, auction.Regions, auction.Status, auction.InitialOffer, auction.CreatedAt, auction.UpdatedAt)
+	_, err := r.db.ExecContext(ctx, q, auction.ID, auction.Description, auction.Category, auction.SellerId, auction.Regions, auction.Status, auction.InitialOffer, auction.CreatedAt, auction.UpdatedAt)
 
 	if err != nil {
 		r.logger.Error("AuctionRepository.Create failed to insert ", zap.Error(err))

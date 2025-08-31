@@ -66,8 +66,7 @@ func NewAuthService(logger *zap.Logger, repo db.Repository, secretName string) (
 	s := service{privateKey: privateKey, publicKey: generateJWKSFromPublicKey(publicKey), logger: logger, repository: repo, RotateTicker: time.NewTicker(10 * time.Minute)}
 
 	//todo remove this when key rotation is implmented in shared
-
-	//	go s.startKeyRotation()
+	//#	go s.startKeyRotation()
 
 	return &s, nil
 }
@@ -269,7 +268,7 @@ func (s *service) Register(ctx context.Context, userCredentials user.User) (stri
 }
 
 func validateEmail(email string) bool {
-	matched, err := regexp.MatchString("^[A-Za-z0-9]+@[a-zA-Z0-9]+\\.[a-z]{2,}$", email)
+	matched, err := regexp.MatchString("^[\\w0-9]+@[\\w0-9]+\\.[a-z]{2,}$", email)
 
 	if err != nil {
 		return false
@@ -326,6 +325,8 @@ func (s *service) RefreshToken(ctx context.Context, refreshToken string) (string
 		return true
 	}
 */
+
+// generate access token in and sign it
 func (s *service) GenerateAccessToken(ctx context.Context, userId string) (string, error) {
 	claims := jwt.MapClaims{
 		"sub": userId,
@@ -354,6 +355,7 @@ func generateID() string {
 	return uuid.New().String()
 }
 
+// Login - gets user and password and returns key token or error if process failed
 func (s *service) Login(ctx context.Context, identifier, password string) (*key.Token, error) {
 
 	user, err := s.repository.FindUserByCredentials(ctx, identifier)

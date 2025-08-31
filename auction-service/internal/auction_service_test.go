@@ -82,7 +82,7 @@ func TestFetchAuction_NotFound(t *testing.T) {
 	res, err := svc.Fetch(context.Background(), "not_found")
 
 	assert.Nil(t, res)
-	assert.Equal(t, domain.ErrNotFound, err)
+	assert.Equal(t, &domain.AppError{Kind: "not_found", Message: "sql: no rows in result set not found"}, err)
 	mockRepo.AssertExpectations(t)
 }
 

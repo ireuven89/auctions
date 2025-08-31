@@ -3,11 +3,14 @@ package service
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"mime/multipart"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/sethvargo/go-retry"
 
 	aws_config "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -52,6 +55,7 @@ type Service interface {
 	Fetch(ctx context.Context, id string) (*domain.Auction, error)
 	Search(ctx context.Context, request domain.AuctionRequest) ([]domain.Auction, error)
 	Update(ctx context.Context, auction domain.AuctionRequest) error
+	Activate(ctx context.Context, auctionId string) error
 	Create(ctx context.Context, auction domain.AuctionRequest) (string, error)
 	CreateAuctionItems(ctx context.Context, auctionId string, items []domain.Item) error
 	CreateAuctionPictures(ctx context.Context, id string, request []*multipart.FileHeader) error
@@ -84,7 +88,7 @@ func (s *AuctionService) Fetch(ctx context.Context, id string) (*domain.Auction,
 	if err != nil {
 		s.logger.Error("AuctionService failed to fetch auction", zap.Error(err))
 		if err == sql.ErrNoRows {
-			return nil, domain.ErrNotFound
+			return nil, domain.ErrNotFound(err.Error())
 		}
 		return nil, fmt.Errorf("AuctionService.Fetch failed fetching bidder %w", err)
 	}
@@ -102,6 +106,20 @@ func (s *AuctionService) Search(ctx context.Context, request domain.AuctionReque
 	}
 
 	return res, nil
+}
+
+func (s *AuctionService) Activate(ctx context.Context, auctionID string) error {
+	_, err := s.repo.Find(ctx, auctionID)
+
+	if err != nil {
+		return fmt.Errorf("AuctionService.Activate %w", err)
+	}
+
+	if err = s.repo.Update(ctx, domain.AuctionRequest{ID: auctionID, Status: domain.Active.String()}); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *AuctionService) Update(ctx context.Context, auction domain.AuctionRequest) error {
@@ -131,13 +149,17 @@ func (s *AuctionService) CreateAuctionItems(ctx context.Context, auctionId strin
 
 func (s *AuctionService) Create(ctx context.Context, auction domain.AuctionRequest) (string, error) {
 	//validate auction
-	if ok := s.validateAuction(auction); !ok {
-		return "", domain.ErrBadRequest
+	if err := s.validateAuction(auction); err != nil {
+		return "", domain.ErrBadRequest(err.Error())
 	}
 
 	auction.ID = generateID()
 	auction.CreatedAt = time.Now()
 	auction.UpdatedAt = time.Now()
+
+	if auction.Regions == nil {
+		auction.Regions, _ = json.Marshal("world")
+	}
 
 	if err := s.repo.Create(ctx, auction); err != nil {
 		s.logger.Error("AuctionService.Failed to create auction ", zap.Error(err))
@@ -152,9 +174,25 @@ func generateID() string {
 	return uuid.New().String()
 }
 
-func (s *AuctionService) validateAuction(auction domain.AuctionRequest) bool {
+func (s *AuctionService) validateAuction(auction domain.AuctionRequest) error {
 
-	return auction.Description != "" && auction.InitialOffer != 0 && auction.MinIncrement != 0
+	if auction.Description == "" {
+		return fmt.Errorf("missing description")
+	}
+
+	if auction.InitialOffer == 0 {
+		return fmt.Errorf("missing initial offer")
+	}
+
+	if auction.MinIncrement == 0 {
+		return fmt.Errorf("missing min increment")
+	}
+
+	if !auction.Category.IsValid() {
+		return fmt.Errorf("missing or invalid category - cateogries are: %v", domain.AllowedCategories())
+	}
+
+	return nil
 }
 
 func (s *AuctionService) Delete(ctx context.Context, id string) error {
@@ -184,13 +222,18 @@ func (s *AuctionService) DeleteMany(ctx context.Context, ids []string) error {
 
 func (s *AuctionService) CreateAuctionPictures(ctx context.Context, itemId string, files []*multipart.FileHeader) error {
 	downloadUrlChannel := make(chan string, len(files))
+	errorChannel := make(chan error, len(files))
 	var wg *sync.WaitGroup
 	for _, file := range files {
 		wg.Add(1)
-		uploadImageToS3(ctx, file, itemId, s.awsConfig.S3Buckets.Primary, downloadUrlChannel, wg)
+		uploadImageToS3(ctx, file, itemId, s.awsConfig.S3Buckets.Primary, downloadUrlChannel, errorChannel, wg)
 	}
 
 	wg.Wait()
+
+	if len(errorChannel) > 0 {
+		return fmt.Errorf("failed uploading item pictures ")
+	}
 
 	var itemPictures []domain.ItemPicture
 
@@ -275,7 +318,7 @@ func (s *AuctionService) validateBidAmount(amount float64, auction *domain.Aucti
 }
 
 // Upload a single image and send its S3 URL through the channel
-func uploadImageToS3(ctx context.Context, image *multipart.FileHeader, itemID, bucketName string, urlChan chan string, wg *sync.WaitGroup) {
+func uploadImageToS3(ctx context.Context, image *multipart.FileHeader, itemID, bucketName string, urlChan chan string, errorChn chan error, wg *sync.WaitGroup) {
 	defer wg.Done() // Mark goroutine as done
 
 	cfg, err := aws_config.LoadDefaultConfig(context.TODO(), aws_config.WithRegion("region"))
@@ -296,15 +339,27 @@ func uploadImageToS3(ctx context.Context, image *multipart.FileHeader, itemID, b
 	// Generate unique file name
 	fileKey := fmt.Sprintf("%s/%s", itemID, generateID())
 
+	//todo add retry mechanism
 	// Upload to S3
-	_, err = client.PutObject(context.TODO(), &s3.PutObjectInput{
-		Bucket: &bucketName,
-		Key:    &fileKey,
-		Body:   file,
+	rertyFunc := retry.NewConstant(time.Second * 5)
+	backOff := retry.WithMaxRetries(3, rertyFunc)
+	err = retry.Do(ctx, backOff, func(ctx context.Context) error {
+		_, err = client.PutObject(context.TODO(), &s3.PutObjectInput{
+			Bucket: &bucketName,
+			Key:    &fileKey,
+			Body:   file,
+		})
+
+		if err != nil {
+			return retry.RetryableError(err)
+		}
+
+		return nil
 	})
+
 	if err != nil {
 		fmt.Println("Upload failed:", err)
-		return
+		errorChn <- err
 	}
 
 	// Generate public URL

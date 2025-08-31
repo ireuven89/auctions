@@ -1,9 +1,14 @@
 package internal
 
 import (
+	"context"
+	"errors"
+	"fmt"
+	"github.com/ireuven89/auctions/auth-service/user"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/ireuven89/auctions/auth-service/internal/mocks"
 	"github.com/stretchr/testify/assert"
@@ -78,7 +83,7 @@ func TestService_Register_Success(t *testing.T) {
 }*/
 
 // Register fails on CreateUser
-/*func TestService_Register_CreateUserFail(t *testing.T) {
+func TestService_Register_CreateUserFail(t *testing.T) {
 	setupTestKeys(t)
 	logger := zap.NewNop()
 	repo := &mocks.MockRepo{
@@ -89,8 +94,8 @@ func TestService_Register_Success(t *testing.T) {
 	_, _, err = svc.Register(context.Background(), user.User{Email: "foo@bar.com", Password: "pass"})
 	assert.Error(t, err)
 }
-*/
-/*// RefreshToken fails if token not found
+
+// RefreshToken fails if token not found
 func TestService_RefreshToken_TokenNotFound(t *testing.T) {
 	setupTestKeys(t)
 	logger := zap.NewNop()
@@ -101,7 +106,7 @@ func TestService_RefreshToken_TokenNotFound(t *testing.T) {
 	assert.NoError(t, err)
 	_, err = svc.RefreshToken(context.Background(), "badtoken")
 	assert.Error(t, err)
-}*/
+}
 
 type EmailTest struct {
 	pattern string
@@ -128,6 +133,10 @@ func TestRegex(t *testing.T) {
 		{
 			valid:   true,
 			pattern: "foo@bar.baz",
+		},
+		{
+			valid:   true,
+			pattern: fmt.Sprintf("test_%d@example.com", time.Now().UnixNano()),
 		},
 	}
 

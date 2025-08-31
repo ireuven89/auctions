@@ -154,3 +154,23 @@ func (m *MockItemRepository) GeItemsWByAuctionWithPictures(ctx context.Context, 
 
 	return m.GeItemsWByAuctionWithPicturesFunc(ctx, id)
 }
+
+type ItemPicturesRepoMock struct {
+	mock.Mock
+}
+
+func (m *ItemPicturesRepoMock) CreateItemPicture(ctx context.Context, picture domain.ItemPicture) error {
+	args := m.Called(ctx, picture)
+
+	return args.Error(0)
+}
+func (m *ItemPicturesRepoMock) DeleteItemPicture(ctx context.Context, id string) error {
+	args := m.Called(ctx, id)
+
+	return args.Error(0)
+}
+func (m *ItemPicturesRepoMock) CreateItemPictureBulk(ctx context.Context, pictures []domain.ItemPicture) error {
+	args := m.Called(ctx, pictures)
+
+	return args.Error(0)
+}

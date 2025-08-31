@@ -99,7 +99,7 @@ func migrate(db *sql.DB) error {
 	})
 
 	if err != nil {
-		return err
+		return fmt.Errorf("failed migrating DB %w", err)
 	}
 
 	return nil
