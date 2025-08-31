@@ -18,6 +18,7 @@ type MockAuctionService struct {
 	CreateAuctionItemsFunc    func(ctx context.Context, itemId string, items []domain.Item) error
 	CreateAuctionPicturesFunc func(ctx context.Context, id string, request []*multipart.FileHeader) error
 	PlaceBidFunc              func(ctx context.Context, bid domain.PlaceBidRequest) error
+	ActivateFunc              func(ctx context.Context, auctionID string) error
 }
 
 func (m *MockAuctionService) CreateAuctionPictures(ctx context.Context, id string, request []*multipart.FileHeader) error {
@@ -54,6 +55,11 @@ func (m *MockAuctionService) PlaceBid(ctx context.Context, bid domain.PlaceBidRe
 
 func (m *MockAuctionService) CreateAuctionItems(ctx context.Context, itemId string, items []domain.Item) error {
 	return m.CreateAuctionItemsFunc(ctx, itemId, items)
+}
+
+func (m *MockAuctionService) Activate(ctx context.Context, auctionID string) error {
+
+	return m.ActivateFunc(ctx, auctionID)
 }
 
 type ItemRepositoryMock struct {
@@ -153,4 +159,24 @@ func (m *MockItemRepository) GetItemsBuAuction(ctx context.Context, id string) (
 func (m *MockItemRepository) GeItemsWByAuctionWithPictures(ctx context.Context, id string) ([]domain.Item, error) {
 
 	return m.GeItemsWByAuctionWithPicturesFunc(ctx, id)
+}
+
+type ItemPicturesRepoMock struct {
+	mock.Mock
+}
+
+func (m *ItemPicturesRepoMock) CreateItemPicture(ctx context.Context, picture domain.ItemPicture) error {
+	args := m.Called(ctx, picture)
+
+	return args.Error(0)
+}
+func (m *ItemPicturesRepoMock) DeleteItemPicture(ctx context.Context, id string) error {
+	args := m.Called(ctx, id)
+
+	return args.Error(0)
+}
+func (m *ItemPicturesRepoMock) CreateItemPictureBulk(ctx context.Context, pictures []domain.ItemPicture) error {
+	args := m.Called(ctx, pictures)
+
+	return args.Error(0)
 }

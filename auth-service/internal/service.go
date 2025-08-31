@@ -66,8 +66,7 @@ func NewAuthService(logger *zap.Logger, repo db.Repository, secretName string) (
 	s := service{privateKey: privateKey, publicKey: generateJWKSFromPublicKey(publicKey), logger: logger, repository: repo, RotateTicker: time.NewTicker(10 * time.Minute)}
 
 	//todo remove this when key rotation is implmented in shared
-
-	//	go s.startKeyRotation()
+	//#	go s.startKeyRotation()
 
 	return &s, nil
 }
@@ -128,13 +127,14 @@ func loadPrivateKeyFromLocal() (*rsa.PrivateKey, error) {
 		return nil, err
 	}
 	block, _ := pem.Decode(privateKeyFile)
-	if block == nil {
+
+	if block == nil || block.Type != "PRIVATE KEY" {
 		return nil, errors.New("invalid PEM block")
 	}
 
 	privateKey, err := jwt.ParseRSAPrivateKeyFromPEM(privateKeyFile)
 	if err != nil {
-		return nil, fmt.Errorf("loadPrivateKeyFromSecretsManager %w", err)
+		return nil, fmt.Errorf("loadPrivateKeyFromLocal %w", err)
 	}
 
 	return privateKey, nil
@@ -156,7 +156,7 @@ func loadPublicKeyFromLocal() (*rsa.PublicKey, error) {
 
 	publicKey, err := jwt.ParseRSAPublicKeyFromPEM(publicKeyFile)
 	if err != nil {
-		return nil, fmt.Errorf("loadPrivateKeyFromSecretsManager %w", err)
+		return nil, fmt.Errorf("loadPublicKeyFromLocal %w", err)
 	}
 
 	return publicKey, nil
@@ -269,7 +269,7 @@ func (s *service) Register(ctx context.Context, userCredentials user.User) (stri
 }
 
 func validateEmail(email string) bool {
-	matched, err := regexp.MatchString("^[A-Za-z0-9]+@[a-zA-Z0-9]+\\.[a-z]{2,}$", email)
+	matched, err := regexp.MatchString("^[\\w0-9]+@[\\w0-9]+\\.[a-z]{2,}$", email)
 
 	if err != nil {
 		return false
@@ -279,9 +279,9 @@ func validateEmail(email string) bool {
 }
 
 func (s *service) RefreshToken(ctx context.Context, refreshToken string) (string, error) {
-	/*	if ok := s.IsRefreshAllowed(ctx, refreshToken); !ok {
+	if ok := s.IsRefreshAllowed(ctx, refreshToken); !ok {
 		return "", key.ErrTooManyRequests
-	}*/
+	}
 
 	userId, err := s.repository.GetToken(ctx, "refresh:"+refreshToken)
 	if err != nil {
@@ -310,22 +310,22 @@ func (s *service) RefreshToken(ctx context.Context, refreshToken string) (string
 	return accessToken, nil
 }
 
-/*
-	func (s *service) IsRefreshAllowed(ctx context.Context, refreshToken string) bool {
-		rate, err := s.repository.GetRefreshRate(ctx, refreshToken)
+func (s *service) IsRefreshAllowed(ctx context.Context, refreshToken string) bool {
+	rate, err := s.repository.GetRefreshRate(ctx, refreshToken)
 
-		if err != nil {
-			s.logger.Error("service.IsRefreshAllowed", zap.Error(err))
-			return false
-		}
-
-		if rate > refreshMaxRate {
-			return false
-		}
-
-		return true
+	if err != nil {
+		s.logger.Error("service.IsRefreshAllowed", zap.Error(err))
+		return false
 	}
-*/
+
+	if rate > refreshMaxRate {
+		return false
+	}
+
+	return true
+}
+
+// generate access token in and sign it
 func (s *service) GenerateAccessToken(ctx context.Context, userId string) (string, error) {
 	claims := jwt.MapClaims{
 		"sub": userId,
@@ -354,6 +354,7 @@ func generateID() string {
 	return uuid.New().String()
 }
 
+// Login - gets user and password and returns key token or error if process failed
 func (s *service) Login(ctx context.Context, identifier, password string) (*key.Token, error) {
 
 	user, err := s.repository.FindUserByCredentials(ctx, identifier)

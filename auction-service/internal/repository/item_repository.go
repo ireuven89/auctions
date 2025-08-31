@@ -174,7 +174,7 @@ func (r *ItemRepository) Delete(ctx context.Context, id string) error {
 }
 
 func (r *ItemRepository) FindByAuctionId(ctx context.Context, auctionId string) ([]domain.Item, error) {
-	q := `select id, descrtption, auction_id, opening_price,  from items where id = ?`
+	q := `select id, description, auction_id, opening_price  from items where id = ?`
 
 	rows, err := r.db.QueryContext(ctx, q, auctionId)
 

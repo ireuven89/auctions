@@ -24,7 +24,7 @@ func TestMakeEndpointGetPublicKey(t *testing.T) {
 
 	resp, err := endpoint(context.Background(), nil)
 	assert.NoError(t, err)
-	assert.Equal(t, []json.RawMessage{[]byte{'E'}}, resp.(GetPublicKeyResponse).PublicKey)
+	assert.Equal(t, jwksprovider.JWKS{[]json.RawMessage{[]byte{'E'}}}, resp.(GetPublicKeyResponse).PublicKey)
 }
 
 // REGISTER USER

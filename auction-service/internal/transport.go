@@ -124,11 +124,13 @@ func encodeGetAuctionResponse(c context.Context, w http.ResponseWriter, response
 
 func decodeGetAuctionsRequest(c context.Context, r *http.Request) (interface{}, error) {
 
-	name := r.URL.Query().Get("name")
+	description := r.URL.Query().Get("description")
+	category := r.URL.Query().Get("category")
 
 	return GetAuctionsRequestModel{
 		AuctionRequest: domain.AuctionRequest{
-			Description: name,
+			Description: description,
+			Category:    domain.Category(category),
 		},
 	}, nil
 }
@@ -225,19 +227,28 @@ func decodeDeleteAuctionRequest(c context.Context, r *http.Request) (interface{}
 func errorEncoder(_ context.Context, err error, w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json")
 
-	switch {
-	case errors.Is(err, domain.ErrNotFound):
-		w.WriteHeader(http.StatusNotFound)
-	case errors.Is(err, domain.ErrTooManyRequests):
-		w.WriteHeader(http.StatusTooManyRequests)
-	case errors.Is(err, domain.ErrUnAuthorized):
-		w.WriteHeader(http.StatusUnauthorized)
-	case errors.Is(err, domain.ErrBadRequest):
-		w.WriteHeader(http.StatusBadRequest)
-	default:
-		w.WriteHeader(http.StatusInternalServerError)
+	var appErr *domain.AppError
+	if errors.As(err, &appErr) {
+		switch appErr.Kind {
+		case "not_found":
+			w.WriteHeader(http.StatusNotFound)
+		case "too_many_requests":
+			w.WriteHeader(http.StatusTooManyRequests)
+		case "unauthorized":
+			w.WriteHeader(http.StatusUnauthorized)
+		case "bad_request":
+			w.WriteHeader(http.StatusBadRequest)
+		default:
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": err.Error(),
+		})
+		return
 	}
 
+	w.WriteHeader(http.StatusInternalServerError)
 	json.NewEncoder(w).Encode(map[string]string{
 		"error": err.Error(),
 	})

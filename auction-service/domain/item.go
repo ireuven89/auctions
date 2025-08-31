@@ -3,8 +3,36 @@ package domain
 import (
 	"mime/multipart"
 	"os"
+	"strings"
 	"time"
 )
+
+type Category string
+
+const (
+	Electronics Category = "Electronics"
+	Clothing    Category = "Clothing"
+	Furniture   Category = "Furniture"
+	Vintage     Category = "Vintage"
+)
+
+func (c Category) IsValid() bool {
+	switch c {
+	case Clothing, Electronics, Furniture, Vintage:
+		return true
+	default:
+		return false
+	}
+}
+
+func AllowedCategories() string {
+	return strings.Join([]string{
+		string(Electronics),
+		string(Clothing),
+		string(Furniture),
+		string(Vintage),
+	}, ",")
+}
 
 type Item struct {
 	ID          string

@@ -78,11 +78,11 @@ func TestRepo_FindAll(t *testing.T) {
 	req := domain.AuctionRequest{Description: "car"}
 
 	// The query should match the generated WHERE clause
-	expectedQuery := regexp.QuoteMeta("SELECT id, description, regions, status, initalOffer, created_at, updatead_at from auctions where description LIKE '%car%'")
+	expectedQuery := regexp.QuoteMeta("SELECT id, description, category, regions, status, initial_offer, created_at, updated_at from auctions where description LIKE '%car%'")
 
-	rows := sqlmock.NewRows([]string{"id", "description", " regions", "status", "initalOffer", "created_at", "updatead_at"}).
-		AddRow("a1", "car auction", []byte{}, domain.Active.String(), 2.0, time.Now(), time.Now()).
-		AddRow("a2", "sports car auction", []byte{}, domain.Active.String(), 2.0, time.Now(), time.Now())
+	rows := sqlmock.NewRows([]string{"id", "description", "category", "regions", "status", "initial_offer", "created_at", "updated_at"}).
+		AddRow("a1", "car auction", "Vintage", []byte{}, domain.Active.String(), 2.0, time.Now(), time.Now()).
+		AddRow("a2", "sports car auction", "Clothing", []byte{}, domain.Active.String(), 2.0, time.Now(), time.Now())
 
 	mock.ExpectQuery(expectedQuery).WillReturnRows(rows)
 

@@ -32,9 +32,10 @@ type ItemPictureRepository struct {
 }
 
 func (r *ItemPictureRepository) CreateItemPicture(ctx context.Context, picture domain.ItemPicture) error {
-	q := "INSERT INTO items_picture (id, item_id, download_link) values (?, ?, ?)"
+	q := "INSERT INTO item_pictures (id, item_id, download_link) values (?, ?, ?)"
 
 	if _, err := r.db.ExecContext(ctx, q, picture.ID, picture.ItemID, picture.DownloadLink); err != nil {
+		r.logger.Error("failed executing query", zap.Error(err))
 		return fmt.Errorf("ItemPictureRepository.CreateItemPicture %w", err)
 	}
 	return nil
@@ -65,7 +66,7 @@ func prepareInsertItemsPictures(itemPictures []domain.ItemPicture) (string, []in
 		values = append(values, item.ID, item.ItemID, item.DownloadLink)
 	}
 
-	query := fmt.Sprintf("INSERT INTO items_picture (id, item_id, download_link) VALUES %s",
+	query := fmt.Sprintf("INSERT INTO item_pictures (id, item_id, download_link) VALUES %s",
 		strings.Join(placeHolders, ", "))
 
 	return query, values
