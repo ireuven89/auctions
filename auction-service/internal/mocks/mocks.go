@@ -18,6 +18,7 @@ type MockAuctionService struct {
 	CreateAuctionItemsFunc    func(ctx context.Context, itemId string, items []domain.Item) error
 	CreateAuctionPicturesFunc func(ctx context.Context, id string, request []*multipart.FileHeader) error
 	PlaceBidFunc              func(ctx context.Context, bid domain.PlaceBidRequest) error
+	ActivateFunc              func(ctx context.Context, auctionID string) error
 }
 
 func (m *MockAuctionService) CreateAuctionPictures(ctx context.Context, id string, request []*multipart.FileHeader) error {
@@ -54,6 +55,11 @@ func (m *MockAuctionService) PlaceBid(ctx context.Context, bid domain.PlaceBidRe
 
 func (m *MockAuctionService) CreateAuctionItems(ctx context.Context, itemId string, items []domain.Item) error {
 	return m.CreateAuctionItemsFunc(ctx, itemId, items)
+}
+
+func (m *MockAuctionService) Activate(ctx context.Context, auctionID string) error {
+
+	return m.ActivateFunc(ctx, auctionID)
 }
 
 type ItemRepositoryMock struct {

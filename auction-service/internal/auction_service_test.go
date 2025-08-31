@@ -57,7 +57,7 @@ func TestCreateAuction(t *testing.T) {
 	logger := zap.NewNop()
 	svc := service.NewService(mockRepo, itemMockRepo, logger)
 
-	req := domain.AuctionRequest{Description: "Test Auction", MinIncrement: 1.0, InitialOffer: 1.0}
+	req := domain.AuctionRequest{Description: "Test Auction", MinIncrement: 1.0, InitialOffer: 1.0, Category: domain.Vintage}
 
 	// Alternative: More flexible context matching
 	mockRepo.On("Create", mock.Anything, mock.AnythingOfType("domain.AuctionRequest")).Return(nil)

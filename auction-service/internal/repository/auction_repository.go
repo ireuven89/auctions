@@ -82,7 +82,7 @@ func (r *AuctionRepository) Find(ctx context.Context, id string) (domain.Auction
 func (r *AuctionRepository) FindAll(ctx context.Context, request domain.AuctionRequest) ([]domain.Auction, error) {
 	var result []domain.Auction
 	whereParams := prepareSearchQuery(request)
-	q := fmt.Sprintf("SELECT id, description, category,  regions, status, initial_offer, created_at, updated_at from auctions where %s", whereParams)
+	q := fmt.Sprintf("SELECT id, description, category, regions, status, initial_offer, created_at, updated_at from auctions where %s", whereParams)
 
 	r.logger.Debug("AuctionRepository.FindAll", zap.String("query", q))
 
@@ -95,7 +95,7 @@ func (r *AuctionRepository) FindAll(ctx context.Context, request domain.AuctionR
 
 	for rows.Next() {
 		var auctionDB AuctionDB
-		if err = rows.Scan(&auctionDB.ID, &auctionDB.Description, &auctionDB.Regions, &auctionDB.Status, &auctionDB.InitialOffer, &auctionDB.CreatedAt, &auctionDB.UpdatedAt); err != nil {
+		if err = rows.Scan(&auctionDB.ID, &auctionDB.Description, &auctionDB.Category, &auctionDB.Regions, &auctionDB.Status, &auctionDB.InitialOffer, &auctionDB.CreatedAt, &auctionDB.UpdatedAt); err != nil {
 			r.logger.Error("FindAll failed to cast results", zap.Error(err))
 			return nil, fmt.Errorf("AuctionRepository.FindAll %w", err)
 		}
