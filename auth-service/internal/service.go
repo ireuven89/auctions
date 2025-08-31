@@ -127,13 +127,14 @@ func loadPrivateKeyFromLocal() (*rsa.PrivateKey, error) {
 		return nil, err
 	}
 	block, _ := pem.Decode(privateKeyFile)
-	if block == nil {
+
+	if block == nil || block.Type != "PRIVATE KEY" {
 		return nil, errors.New("invalid PEM block")
 	}
 
 	privateKey, err := jwt.ParseRSAPrivateKeyFromPEM(privateKeyFile)
 	if err != nil {
-		return nil, fmt.Errorf("loadPrivateKeyFromSecretsManager %w", err)
+		return nil, fmt.Errorf("loadPrivateKeyFromLocal %w", err)
 	}
 
 	return privateKey, nil
@@ -155,7 +156,7 @@ func loadPublicKeyFromLocal() (*rsa.PublicKey, error) {
 
 	publicKey, err := jwt.ParseRSAPublicKeyFromPEM(publicKeyFile)
 	if err != nil {
-		return nil, fmt.Errorf("loadPrivateKeyFromSecretsManager %w", err)
+		return nil, fmt.Errorf("loadPublicKeyFromLocal %w", err)
 	}
 
 	return publicKey, nil
@@ -278,9 +279,9 @@ func validateEmail(email string) bool {
 }
 
 func (s *service) RefreshToken(ctx context.Context, refreshToken string) (string, error) {
-	/*	if ok := s.IsRefreshAllowed(ctx, refreshToken); !ok {
+	if ok := s.IsRefreshAllowed(ctx, refreshToken); !ok {
 		return "", key.ErrTooManyRequests
-	}*/
+	}
 
 	userId, err := s.repository.GetToken(ctx, "refresh:"+refreshToken)
 	if err != nil {
@@ -309,22 +310,20 @@ func (s *service) RefreshToken(ctx context.Context, refreshToken string) (string
 	return accessToken, nil
 }
 
-/*
-	func (s *service) IsRefreshAllowed(ctx context.Context, refreshToken string) bool {
-		rate, err := s.repository.GetRefreshRate(ctx, refreshToken)
+func (s *service) IsRefreshAllowed(ctx context.Context, refreshToken string) bool {
+	rate, err := s.repository.GetRefreshRate(ctx, refreshToken)
 
-		if err != nil {
-			s.logger.Error("service.IsRefreshAllowed", zap.Error(err))
-			return false
-		}
-
-		if rate > refreshMaxRate {
-			return false
-		}
-
-		return true
+	if err != nil {
+		s.logger.Error("service.IsRefreshAllowed", zap.Error(err))
+		return false
 	}
-*/
+
+	if rate > refreshMaxRate {
+		return false
+	}
+
+	return true
+}
 
 // generate access token in and sign it
 func (s *service) GenerateAccessToken(ctx context.Context, userId string) (string, error) {

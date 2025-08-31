@@ -100,7 +100,8 @@ func TestService_RefreshToken_TokenNotFound(t *testing.T) {
 	setupTestKeys(t)
 	logger := zap.NewNop()
 	repo := &mocks.MockRepo{
-		GetTokenFunc: func(ctx context.Context, key string) (string, error) { return "", errors.New("not found") },
+		GetTokenFunc:       func(ctx context.Context, key string) (string, error) { return "", errors.New("not found") },
+		GetRefreshRateFunc: func(ctx context.Context, token string) (int, error) { return 1, nil },
 	}
 	svc, err := NewAuthService(logger, repo, "ignored")
 	assert.NoError(t, err)

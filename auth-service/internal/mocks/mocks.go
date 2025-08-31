@@ -2,10 +2,8 @@ package mocks
 
 import (
 	"context"
-<<<<<<< HEAD
-=======
+
 	"github.com/ireuven89/auctions/shared/jwksprovider"
->>>>>>> a2466c3 (items logic)
 	"time"
 
 	"github.com/ireuven89/auctions/auth-service/key"
@@ -20,15 +18,12 @@ type MockRepo struct {
 	FindUserByCredentialsFunc func(ctx context.Context, identifier string) (*user.User, error)
 	GetTokenFunc              func(ctx context.Context, token string) (string, error)
 	SaveRefreshTokenFunc      func(ctx context.Context, token string, userId string, ttl time.Duration) error
-<<<<<<< HEAD
 	GetRefreshRateFunc        func(ctx context.Context, token string) (int, error)
+	DeleteUserFunc            func(ctx context.Context, id string) error
 }
 
 func (m *MockRepo) GetRefreshRate(ctx context.Context, token string) (int, error) {
 	return m.GetRefreshRateFunc(ctx, token)
-=======
-	DeleteUserFunc            func(ctx context.Context, id string) error
->>>>>>> a2466c3 (items logic)
 }
 
 func (m *MockRepo) FindUser(ctx context.Context, id string) (*user.User, error) {
@@ -44,7 +39,7 @@ func (m *MockRepo) SaveRefreshToken(ctx context.Context, token string, userId st
 }
 
 func (m *MockRepo) GetToken(ctx context.Context, token string) (string, error) {
-	return m.GetToken(ctx, token)
+	return m.GetTokenFunc(ctx, token)
 }
 
 func (m *MockRepo) CreateUser(ctx context.Context, u user.User) error {
@@ -80,7 +75,7 @@ func (m *MockService) Login(ctx context.Context, userIdentifier, password string
 func (m *MockService) RefreshToken(ctx context.Context, refreshToken string) (string, error) {
 	return m.RefreshTokenFunc(ctx, refreshToken)
 }
-func (m *MockService) GetPublicKey(ctx context.Context) jwksprovider.JWKS{
+func (m *MockService) GetPublicKey(ctx context.Context) jwksprovider.JWKS {
 	return m.GetPublicKeyFunc(ctx)
 }
 
